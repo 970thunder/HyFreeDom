@@ -9,6 +9,7 @@ public class Card {
     private String status;
     private LocalDateTime expiredAt;
     private Long usedBy;
+    private String usedByUsername;
     private LocalDateTime usedAt;
     private LocalDateTime createdAt;
 
@@ -58,6 +59,14 @@ public class Card {
 
     public void setUsedBy(Long usedBy) {
         this.usedBy = usedBy;
+    }
+
+    public String getUsedByUsername() {
+        return usedByUsername;
+    }
+
+    public void setUsedByUsername(String usedByUsername) {
+        this.usedByUsername = usedByUsername;
     }
 
     public LocalDateTime getUsedAt() {

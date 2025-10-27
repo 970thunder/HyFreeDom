@@ -97,6 +97,24 @@ public class StatsController {
     }
 
     /**
+     * 获取用户注册统计
+     */
+    @GetMapping("/user-registration")
+    public ApiResponse<Map<String, Object>> getUserRegistrationStats(
+            @RequestHeader("Authorization") String authorization,
+            @RequestParam(value = "type", defaultValue = "day") String type,
+            @RequestParam(value = "days", defaultValue = "7") Integer days) {
+        validateAdminAuth(authorization);
+
+        try {
+            Map<String, Object> stats = statsService.getUserRegistrationStats(type, days);
+            return ApiResponse.ok(stats);
+        } catch (Exception e) {
+            return ApiResponse.error(50000, "获取用户注册统计失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 刷新统计数据缓存
      */
     @PostMapping("/refresh")

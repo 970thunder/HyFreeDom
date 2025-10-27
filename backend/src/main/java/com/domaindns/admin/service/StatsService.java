@@ -1,6 +1,7 @@
 package com.domaindns.admin.service;
 
 import com.domaindns.admin.mapper.AdminUserMapper;
+import com.domaindns.auth.mapper.UserMapper;
 import com.domaindns.cf.mapper.ZoneMapper;
 import com.domaindns.cf.mapper.DnsRecordMapper;
 import com.domaindns.user.mapper.PointsMapper;
@@ -22,6 +23,9 @@ public class StatsService {
     private AdminUserMapper adminUserMapper;
 
     @Autowired
+    private UserMapper userMapper;
+
+    @Autowired
     private ZoneMapper zoneMapper;
 
     @Autowired
@@ -40,6 +44,7 @@ public class StatsService {
     private static final String CACHE_PREFIX = "stats:";
     private static final String DASHBOARD_CACHE_KEY = CACHE_PREFIX + "dashboard";
     private static final String USER_CACHE_KEY = CACHE_PREFIX + "users";
+    private static final String USER_REGISTRATION_CACHE_KEY = CACHE_PREFIX + "user_registration";
     private static final String ZONE_CACHE_KEY = CACHE_PREFIX + "zones";
     private static final String DNS_RECORD_CACHE_KEY = CACHE_PREFIX + "dns_records";
     private static final String POINTS_CACHE_KEY = CACHE_PREFIX + "points";
@@ -302,12 +307,134 @@ public class StatsService {
     }
 
     /**
+     * 获取用户注册统计
+     */
+    public Map<String, Object> getUserRegistrationStats(String type, Integer days) {
+        // 构建缓存键
+        String cacheKey = USER_REGISTRATION_CACHE_KEY + ":" + type + ":" + days;
+
+        // 尝试从Redis获取缓存
+        @SuppressWarnings("unchecked")
+        Map<String, Object> cachedStats = (Map<String, Object>) redisTemplate.opsForValue().get(cacheKey);
+        if (cachedStats != null) {
+            return cachedStats;
+        }
+
+        Map<String, Object> stats = new HashMap<>();
+
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            String endDate = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            String startDate;
+
+            // 根据类型计算开始日期
+            switch (type.toLowerCase()) {
+                case "day":
+                    startDate = now.minusDays(days - 1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                    break;
+                case "week":
+                    startDate = now.minusWeeks(days).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                    break;
+                case "month":
+                    startDate = now.minusMonths(days).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                    break;
+                default:
+                    startDate = now.minusDays(days - 1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            }
+
+            // 获取按日期分组的注册数据
+            List<Map<String, Object>> registrationData = userMapper.countByDateGroup(startDate, endDate);
+
+            // 构建完整的日期范围数据（填充缺失的日期）
+            Map<String, Integer> dateCountMap = new HashMap<>();
+            for (Map<String, Object> data : registrationData) {
+                String date = data.get("date").toString();
+                Integer count = ((Number) data.get("count")).intValue();
+                dateCountMap.put(date, count);
+            }
+
+            // 生成完整的日期序列
+            List<Map<String, Object>> chartData = new java.util.ArrayList<>();
+            LocalDateTime currentDate = LocalDateTime.parse(startDate + "T00:00:00");
+            LocalDateTime endDateTime = LocalDateTime.parse(endDate + "T23:59:59");
+
+            while (!currentDate.isAfter(endDateTime)) {
+                String dateStr = currentDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                Integer count = dateCountMap.getOrDefault(dateStr, 0);
+
+                Map<String, Object> dayData = new HashMap<>();
+                dayData.put("date", dateStr);
+                dayData.put("count", count);
+                dayData.put("displayDate", formatDisplayDate(dateStr, type));
+                chartData.add(dayData);
+
+                currentDate = currentDate.plusDays(1);
+            }
+
+            // 计算统计信息
+            int totalRegistrations = registrationData.stream()
+                    .mapToInt(data -> ((Number) data.get("count")).intValue())
+                    .sum();
+
+            int maxDailyRegistrations = chartData.stream()
+                    .mapToInt(data -> (Integer) data.get("count"))
+                    .max()
+                    .orElse(0);
+
+            double avgDailyRegistrations = chartData.size() > 0 ? (double) totalRegistrations / chartData.size() : 0.0;
+
+            // 构建返回数据
+            stats.put("type", type);
+            stats.put("days", days);
+            stats.put("startDate", startDate);
+            stats.put("endDate", endDate);
+            stats.put("chartData", chartData);
+            stats.put("totalRegistrations", totalRegistrations);
+            stats.put("maxDailyRegistrations", maxDailyRegistrations);
+            stats.put("avgDailyRegistrations", Math.round(avgDailyRegistrations * 100.0) / 100.0);
+            stats.put("lastUpdated", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+
+            // 缓存结果（缓存时间根据类型调整）
+            int cacheMinutes = type.equals("day") ? 5 : (type.equals("week") ? 30 : 60);
+            redisTemplate.opsForValue().set(cacheKey, stats, cacheMinutes, TimeUnit.MINUTES);
+
+        } catch (Exception e) {
+            stats.put("error", "用户注册统计计算失败: " + e.getMessage());
+            stats.put("chartData", new java.util.ArrayList<>());
+            stats.put("totalRegistrations", 0);
+            stats.put("maxDailyRegistrations", 0);
+            stats.put("avgDailyRegistrations", 0.0);
+        }
+
+        return stats;
+    }
+
+    /**
+     * 格式化显示日期
+     */
+    private String formatDisplayDate(String dateStr, String type) {
+        LocalDateTime date = LocalDateTime.parse(dateStr + "T00:00:00");
+        switch (type.toLowerCase()) {
+            case "day":
+                return String.format("%d/%d", date.getMonthValue(), date.getDayOfMonth());
+            case "week":
+                return String.format("%d月第%d周", date.getMonthValue(),
+                        (date.getDayOfMonth() - 1) / 7 + 1);
+            case "month":
+                return String.format("%d年%d月", date.getYear(), date.getMonthValue());
+            default:
+                return String.format("%d/%d", date.getMonthValue(), date.getDayOfMonth());
+        }
+    }
+
+    /**
      * 刷新所有统计数据缓存
      */
     public void refreshAllStats() {
         // 清除所有缓存
         redisTemplate.delete(DASHBOARD_CACHE_KEY);
         redisTemplate.delete(USER_CACHE_KEY);
+        redisTemplate.delete(USER_REGISTRATION_CACHE_KEY + ":*");
         redisTemplate.delete(ZONE_CACHE_KEY);
         redisTemplate.delete(DNS_RECORD_CACHE_KEY);
         redisTemplate.delete(POINTS_CACHE_KEY);
@@ -322,6 +449,7 @@ public class StatsService {
     public void clearAllStatsCache() {
         redisTemplate.delete(DASHBOARD_CACHE_KEY);
         redisTemplate.delete(USER_CACHE_KEY);
+        redisTemplate.delete(USER_REGISTRATION_CACHE_KEY + ":*");
         redisTemplate.delete(ZONE_CACHE_KEY);
         redisTemplate.delete(DNS_RECORD_CACHE_KEY);
         redisTemplate.delete(POINTS_CACHE_KEY);

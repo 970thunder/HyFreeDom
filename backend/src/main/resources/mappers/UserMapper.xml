@@ -56,4 +56,21 @@
 	<update id="updatePoints">
 		UPDATE users SET points = #{points} WHERE id = #{id}
 	</update>
+
+	<select id="countByDateRange" resultType="int">
+		SELECT COUNT(1) FROM users 
+		WHERE role = 'USER' AND status = 1
+		AND DATE(created_at) BETWEEN #{startDate} AND #{endDate}
+	</select>
+
+	<select id="countByDateGroup" resultType="map">
+		SELECT 
+			DATE(created_at) as date,
+			COUNT(1) as count
+		FROM users 
+		WHERE role = 'USER' AND status = 1
+		AND DATE(created_at) BETWEEN #{startDate} AND #{endDate}
+		GROUP BY DATE(created_at)
+		ORDER BY DATE(created_at)
+	</select>
 </mapper>

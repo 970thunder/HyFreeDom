@@ -25,4 +25,15 @@ public interface UserMapper {
     int updateStatus(@Param("id") Long id, @Param("status") Integer status);
 
     int updatePoints(@Param("id") Long id, @Param("points") Integer points);
+
+    /**
+     * 统计指定时间范围内的用户注册数量
+     */
+    int countByDateRange(@Param("startDate") String startDate, @Param("endDate") String endDate);
+
+    /**
+     * 按日期统计用户注册数量（用于图表）
+     */
+    java.util.List<java.util.Map<String, Object>> countByDateGroup(@Param("startDate") String startDate,
+            @Param("endDate") String endDate);
 }

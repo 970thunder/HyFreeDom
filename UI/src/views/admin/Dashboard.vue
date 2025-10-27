@@ -29,10 +29,7 @@
 
 		<!-- 图表区域 -->
 		<div class="charts-grid">
-			<el-card class="chart-card">
-				<h3>最近 7 天用户注册</h3>
-				<div class="chart-placeholder"></div>
-			</el-card>
+			<RegistrationLineChart title="用户注册统计" api-endpoint="/api/admin/stats/user-registration" />
 			<el-card class="chart-card">
 				<h3>最近 7 天 DNS 变更</h3>
 				<div class="chart-placeholder"></div>
@@ -112,12 +109,14 @@ import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth.js'
 import { apiGet } from '@/utils/api.js'
 import SEOHead from '@/components/SEOHead.vue'
+import RegistrationLineChart from '@/components/RegistrationLineChart.vue'
 
 // 认证store
 const authStore = useAuthStore()
 
 // 加载状态
 const isLoading = ref(false)
+
 
 // 统计数据
 const stats = ref([
@@ -165,6 +164,7 @@ const syncLoading = ref(false)
 
 // 最近操作
 const recentActions = ref([])
+
 
 // 获取动作类型
 const getActionType = (action) => {
@@ -482,6 +482,7 @@ onMounted(() => {
 	color: #0f172a;
 	font-weight: 600;
 }
+
 
 .chart-placeholder {
 	height: 180px;
