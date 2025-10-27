@@ -28,6 +28,33 @@
 		ORDER BY id DESC
 	</select>
 
+	<resultMap id="RecWithUserMap" type="com.domaindns.cf.dto.DnsRecordDtos$DnsRecordWithUser">
+		<id property="id" column="id" />
+		<result property="zoneId" column="zone_id" />
+		<result property="cfRecordId" column="cf_record_id" />
+		<result property="name" column="name" />
+		<result property="type" column="type" />
+		<result property="content" column="content" />
+		<result property="ttl" column="ttl" />
+		<result property="proxied" column="proxied" />
+		<result property="createdAt" column="created_at" />
+		<result property="updatedAt" column="updated_at" />
+		<result property="username" column="username" />
+	</resultMap>
+
+	<select id="listByZoneWithUser" resultMap="RecWithUserMap">
+		SELECT 
+			dr.*,
+			u.username
+		FROM dns_records dr
+		LEFT JOIN user_domains ud ON ud.dns_record_id = dr.id
+		LEFT JOIN users u ON u.id = ud.user_id
+		WHERE dr.zone_id=#{zoneId}
+		<if test="type!=null and type!=''"> AND dr.type=#{type}</if>
+		<if test="name!=null and name!=''"> AND dr.name LIKE CONCAT('%',#{name},'%')</if>
+		ORDER BY dr.id DESC
+	</select>
+
 	<select id="countByZoneAndName" resultType="int">
 		SELECT COUNT(1) FROM dns_records WHERE zone_id=#{zoneId} AND name=#{name}
 	</select>

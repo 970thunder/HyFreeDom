@@ -67,6 +67,7 @@
 								<th>内容</th>
 								<th>TTL</th>
 								<th>代理</th>
+								<th>创建用户</th>
 								<th>操作</th>
 							</tr>
 						</thead>
@@ -81,6 +82,7 @@
 										{{ record.proxied ? '是' : '否' }}
 									</span>
 								</td>
+								<td>{{ record.username || '系统' }}</td>
 								<td class="row">
 									<button class="btn outline" @click="editRecord(record)" :disabled="record.loading">
 										编辑

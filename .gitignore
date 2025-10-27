@@ -348,3 +348,5 @@ public
 # Temporary folders
 tmp/
 temp/
+
+.claude/

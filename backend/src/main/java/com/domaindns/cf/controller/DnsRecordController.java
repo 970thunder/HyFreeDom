@@ -1,7 +1,6 @@
 package com.domaindns.cf.controller;
 
 import com.domaindns.auth.service.JwtService;
-import com.domaindns.cf.model.DnsRecord;
 import com.domaindns.cf.service.DnsRecordService;
 import com.domaindns.common.ApiResponse;
 import io.jsonwebtoken.Claims;
@@ -31,13 +30,14 @@ public class DnsRecordController {
     }
 
     @GetMapping("/records")
-    public ApiResponse<List<DnsRecord>> list(@RequestHeader("Authorization") String authorization,
+    public ApiResponse<List<com.domaindns.cf.dto.DnsRecordDtos.DnsRecordWithUser>> list(
+            @RequestHeader("Authorization") String authorization,
             @PathVariable("zoneId") Long zoneDbId,
             @RequestParam(value = "type", required = false) String type,
             @RequestParam(value = "name", required = false) String name) {
         // 验证管理员权限
         validateAdminAuth(authorization);
-        return ApiResponse.ok(service.list(zoneDbId, type, name));
+        return ApiResponse.ok(service.listWithUser(zoneDbId, type, name));
     }
 
     @PostMapping("/records")

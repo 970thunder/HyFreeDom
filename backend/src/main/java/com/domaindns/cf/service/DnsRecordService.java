@@ -90,6 +90,11 @@ public class DnsRecordService {
         return recordMapper.listByZone(zoneDbId, type, name);
     }
 
+    public List<com.domaindns.cf.dto.DnsRecordDtos.DnsRecordWithUser> listWithUser(Long zoneDbId, String type,
+            String name) {
+        return recordMapper.listByZoneWithUser(zoneDbId, type, name);
+    }
+
     public void create(Long zoneDbId, String bodyJson) throws Exception {
         Zone z = zoneById(zoneDbId);
         CfAccount acc = accById(z.getCfAccountId());

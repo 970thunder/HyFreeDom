@@ -122,7 +122,10 @@ const option = ref({
 const formatTime = (ts) => {
     if (!ts) return '—'
     const d = new Date(ts)
-    return d.toLocaleString('zh-CN')
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
 }
 
 const applyDataToChart = (chartData = []) => {
@@ -241,7 +244,7 @@ loadData()
 
 .chart-wrapper {
     position: relative;
-    height: 300px;
+    height: 250px;
     margin-bottom: 20px;
 }
 

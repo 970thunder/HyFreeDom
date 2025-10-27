@@ -485,7 +485,7 @@ onMounted(() => {
 
 
 .chart-placeholder {
-	height: 180px;
+	height: 250px;
 	background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 10px, #e2e8f0 10px, #e2e8f0 20px);
 	border-radius: 12px;
 	border: 1px dashed #cbd5e1;

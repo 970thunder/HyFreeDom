@@ -12,6 +12,9 @@ public interface DnsRecordMapper {
 
     List<DnsRecord> listByZone(@Param("zoneId") Long zoneId, @Param("type") String type, @Param("name") String name);
 
+    List<com.domaindns.cf.dto.DnsRecordDtos.DnsRecordWithUser> listByZoneWithUser(@Param("zoneId") Long zoneId,
+            @Param("type") String type, @Param("name") String name);
+
     int countByZoneAndName(@Param("zoneId") Long zoneId, @Param("name") String name);
 
     com.domaindns.cf.model.DnsRecord findOneByZoneAndName(@Param("zoneId") Long zoneId, @Param("name") String name);
