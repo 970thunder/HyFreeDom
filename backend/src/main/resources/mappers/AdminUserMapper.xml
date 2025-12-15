@@ -11,28 +11,47 @@
 		<result property="status" column="status" />
 		<result property="ipAddress" column="ip_address" />
 		<result property="createdAt" column="created_at" />
+		<result property="isVerified" column="is_verified" />
 	</resultMap>
 
 	<select id="list" resultMap="UserMap">
-		SELECT id,username,email,display_name,points,role,status,ip_address,created_at FROM users
+		SELECT u.id, u.username, u.email, u.display_name, u.points, u.role, u.status, u.ip_address, u.created_at,
+		       up.is_verified
+		FROM users u
+		LEFT JOIN user_profiles up ON u.id = up.user_id
 		<where>
-			<if test="status!=null">status=#{status}</if>
+			<if test="status!=null">u.status=#{status}</if>
 			<if test="role!=null and role!=''">
 				<if test="status!=null"> AND </if>
-				role=#{role}
+				u.role=#{role}
+			</if>
+			<if test="isVerified!=null">
+			    AND (
+			        (#{isVerified} = true AND up.is_verified = 1)
+			        OR
+			        (#{isVerified} = false AND (up.is_verified IS NULL OR up.is_verified = 0))
+			    )
 			</if>
 		</where>
-		ORDER BY id DESC
+		ORDER BY u.id DESC
 		<if test="size!=null"> LIMIT #{offset}, #{size}</if>
 	</select>
 
 	<select id="count" resultType="int">
-		SELECT COUNT(1) FROM users
+		SELECT COUNT(1) FROM users u
+		LEFT JOIN user_profiles up ON u.id = up.user_id
 		<where>
-			<if test="status!=null">status=#{status}</if>
+			<if test="status!=null">u.status=#{status}</if>
 			<if test="role!=null and role!=''">
 				<if test="status!=null"> AND </if>
-				role=#{role}
+				u.role=#{role}
+			</if>
+			<if test="isVerified!=null">
+			    AND (
+			        (#{isVerified} = true AND up.is_verified = 1)
+			        OR
+			        (#{isVerified} = false AND (up.is_verified IS NULL OR up.is_verified = 0))
+			    )
 			</if>
 		</where>
 	</select>

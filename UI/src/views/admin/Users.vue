@@ -25,6 +25,11 @@
 						<option value="0">禁用</option>
 						<option value="2">注销</option>
 					</select>
+					<select class="select" style="max-width:160px;" v-model="filters.isVerified" @change="loadUsers">
+						<option value="">全部实名</option>
+						<option :value="true">已认证</option>
+						<option :value="false">未认证</option>
+					</select>
 				</div>
 			</div>
 
@@ -35,6 +40,7 @@
 							<th>ID</th>
 							<th>用户名</th>
 							<th>邮箱</th>
+							<th>实名</th>
 							<th>IP地址</th>
 							<th>积分</th>
 							<th>角色</th>
@@ -48,6 +54,11 @@
 							<td>{{ user.id }}</td>
 							<td>{{ user.username }}</td>
 							<td>{{ user.email }}</td>
+							<td>
+								<span class="badge" :class="user.isVerified ? 'success' : 'info'">
+									{{ user.isVerified ? '已认证' : '未认证' }}
+								</span>
+							</td>
 							<td>{{ user.ipAddress || '-' }}</td>
 							<td>{{ user.points || 0 }}</td>
 							<td>
@@ -277,6 +288,7 @@ const filters = reactive({
 	keyword: '',
 	role: '',
 	status: '',
+	isVerified: '',
 	page: 1,
 	size: 20
 })
@@ -318,6 +330,9 @@ const loadUsers = async () => {
 		}
 		if (filters.status) {
 			params.append('status', filters.status)
+		}
+		if (filters.isVerified !== '') {
+			params.append('isVerified', filters.isVerified)
 		}
 		params.append('page', filters.page)
 		params.append('size', filters.size)
@@ -743,6 +758,12 @@ onMounted(() => {
 	background: #fee2e2;
 	color: #991b1b;
 	border-color: #f87171;
+}
+
+.badge.info {
+	background: #f1f5f9;
+	color: #475569;
+	border-color: #cbd5e1;
 }
 
 .card-header {

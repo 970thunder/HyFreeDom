@@ -12,6 +12,7 @@ public class AdminUser {
     private Integer status;
     private String ipAddress;
     private LocalDateTime createdAt;
+    private Boolean isVerified;
 
     public Long getId() {
         return id;
@@ -83,5 +84,13 @@ public class AdminUser {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Boolean getIsVerified() {
+        return isVerified;
+    }
+
+    public void setIsVerified(Boolean isVerified) {
+        this.isVerified = isVerified;
     }
 }
