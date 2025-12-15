@@ -96,18 +96,15 @@
 </template>
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.js'
 import { apiGet, apiPost } from '@/utils/api.js'
 import { ElMessage } from 'element-plus'
 
-const router = useRouter()
 const authStore = useAuthStore()
 
 // 响应式数据
 const isLoading = ref(false)
 const isGenerating = ref(false)
-const isVerified = ref(false)
 const inviteInfo = ref({
 	hasCode: false,
 	code: '',
@@ -126,17 +123,6 @@ const systemSettings = ref({
 	inviterPoints: 3,  // 邀请者获得积分
 	inviteePoints: 3   // 被邀请者获得积分
 })
-
-const loadUserInfo = async () => {
-	try {
-		const response = await apiGet('/api/user/info', { token: authStore.token })
-		if (response.data) {
-			isVerified.value = response.data.isVerified
-		}
-	} catch (error) {
-		console.error('加载用户信息失败:', error)
-	}
-}
 
 // 加载系统设置
 const loadSystemSettings = async () => {
@@ -186,12 +172,6 @@ const loadInviteCode = async () => {
 
 // 生成/重置邀请码
 const generateInviteCode = async () => {
-	if (!isVerified.value) {
-		ElMessage.warning('请先完成实名认证才能生成邀请码')
-		router.push('/user/profile')
-		return
-	}
-
 	isGenerating.value = true
 	try {
 		const response = await apiPost('/api/user/invite/generate', {
@@ -393,8 +373,7 @@ const initData = async () => {
 			loadSystemSettings(),
 			loadInviteCode(),
 			loadInviteDetails(),
-			loadMyInviter(),
-			loadUserInfo()
+			loadMyInviter()
 		])
 	} catch (error) {
 		console.error('初始化数据失败:', error)

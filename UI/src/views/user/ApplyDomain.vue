@@ -8,14 +8,7 @@
 				<button class="btn outline" @click="refreshZones">刷新域名列表</button>
 			</div>
 
-			<div v-if="!isVerified" class="warning-box"
-				style="margin: 20px; padding: 15px; background-color: #fef0f0; border: 1px solid #fde2e2; border-radius: 4px; color: #f56c6c;">
-				<p>⚠️ 您的账号尚未完成实名认证，无法申请域名。</p>
-				<p>请前往 <router-link to="/user/profile"
-						style="color: #409eff; text-decoration: underline;">个人资料</router-link> 页面进行实名认证。</p>
-			</div>
-
-			<div class="form" v-else>
+			<div class="form">
 				<!-- 主域名和子域名前缀在同一行 -->
 				<div class="grid cols-2">
 					<div class="input-row">

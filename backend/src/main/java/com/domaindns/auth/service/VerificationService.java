@@ -4,7 +4,7 @@ import com.domaindns.auth.dto.AuthDtos.VerificationReq;
 import com.domaindns.auth.dto.AuthDtos.VerificationStatusResp;
 import com.domaindns.auth.entity.UserProfile;
 import com.domaindns.auth.mapper.UserProfileMapper;
-import com.domaindns.common.SecretCrypto;
+import com.domaindns.common.EncryptionUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -23,14 +23,12 @@ import java.util.Map;
 public class VerificationService {
 
     private final UserProfileMapper userProfileMapper;
-    private final SecretCrypto secretCrypto;
 
     @Value("${aliyun.api.appcode:}")
     private String appCode;
 
-    public VerificationService(UserProfileMapper userProfileMapper, SecretCrypto secretCrypto) {
+    public VerificationService(UserProfileMapper userProfileMapper) {
         this.userProfileMapper = userProfileMapper;
-        this.secretCrypto = secretCrypto;
     }
 
     @Transactional
@@ -49,8 +47,8 @@ public class VerificationService {
 
         // 3. Encrypt and Save
         try {
-            String encName = secretCrypto.encrypt(req.realName);
-            String encId = secretCrypto.encrypt(req.idCard);
+            String encName = EncryptionUtil.encrypt(req.realName);
+            String encId = EncryptionUtil.encrypt(req.idCard);
 
             if (existing == null) {
                 UserProfile profile = new UserProfile();
@@ -78,22 +76,8 @@ public class VerificationService {
         if (profile != null && profile.getIsVerified() != null && profile.getIsVerified() == 1) {
             resp.isVerified = true;
             try {
-                // Try to decrypt using SecretCrypto.
-                // If the data was encrypted with old EncryptionUtil, it won't have "enc:"
-                // prefix.
-                // SecretCrypto.decrypt returns non-prefixed strings as-is.
-                // So if it's old data (Base64), it will be returned as Base64.
-                // We should handle that case if we want to be perfect, but since this is
-                // dev/new feature,
-                // we can assume data is new OR we can try to migrate.
-                // For now, simple replacement.
-                String realName = secretCrypto.decrypt(profile.getRealName());
-                String idCard = secretCrypto.decrypt(profile.getIdCard());
-
-                // If the decrypted string looks like Base64 (from old EncryptionUtil), this
-                // might fail masking or display garbage.
-                // But let's assume the user will re-verify or wipe DB since they are in dev.
-
+                String realName = EncryptionUtil.decrypt(profile.getRealName());
+                String idCard = EncryptionUtil.decrypt(profile.getIdCard());
                 resp.realName = maskName(realName);
                 resp.idCard = maskIdCard(idCard);
                 resp.verifiedAt = profile.getVerifiedAt().toString();
@@ -167,52 +151,49 @@ public class VerificationService {
                 }
 
                 // Parse response
+                // Based on user snippet, we should check the body.
+                // Assuming success response structure based on standard Aliyun Market APIs or
+                // simple string check if specific structure is unknown.
+                // However, the user snippet provided System.out.println(response.toString()).
+                // Usually these APIs return JSON. Let's parse it.
                 ObjectMapper mapper = new ObjectMapper();
                 Map<String, Object> map = mapper.readValue(result.toString(), Map.class);
 
-                // Check if status/code indicates success
-                // Usually "status": "01" or "code": "200" or similar.
-                // For this specific API (sfzsmyxb.market.alicloudapi.com /get/idcard/checkV3),
-                // common response structure:
+                // Response format provided by user:
                 // {
-                // "status": "01",
-                // "msg": "实名认证通过",
+                // "msg": "成功",
+                // "success": true,
+                // "code": 200,
+                // "data": {
+                // "result": 1, // 0:一致 1:不一致 2:无记录
+                // "order_no": "...",
+                // "desc": "不一致",
                 // ...
                 // }
-                // OR
-                // {
-                // "code": 200,
-                // "msg": "成功",
-                // "data": { ... }
                 // }
 
-                // Let's try to detect based on common patterns or assume the user wants strict
-                // verification.
-                // Since I don't have the exact JSON schema, I will log it and return false if
-                // not explicitly success.
-                // However, the user said: "后端并没有调用这个接口认证".
-
-                System.out.println("Aliyun API Response: " + result.toString());
-
-                // Logic based on typical Aliyun Market Identity APIs
-                // Often they return "status": "01" for match, "02" for mismatch.
-                Object status = map.get("status");
-                if ("01".equals(status)) {
-                    return true;
+                // Check success flag first
+                Boolean success = (Boolean) map.get("success");
+                if (success == null || !success) {
+                    return false;
                 }
 
-                // Some APIs use "code"
-                // Object code = map.get("code");
-                // if (code instanceof Integer && (Integer) code == 200) { ... }
-
-                // If the user hasn't specified the exact JSON response format,
-                // I will assume standard "status": "01" based on the "checkV3" naming often
-                // used in these APIs.
-                // If it fails, the logs will show why.
+                // Check data result
+                Map<String, Object> data = (Map<String, Object>) map.get("data");
+                if (data != null) {
+                    Object res = data.get("result");
+                    // 0 means consistent (success)
+                    // The result might be Integer or String depending on JSON parsing
+                    if (res != null) {
+                        String resStr = res.toString();
+                        if ("0".equals(resStr)) {
+                            return true;
+                        }
+                    }
+                }
 
                 return false;
             } else {
-                System.out.println("Aliyun API Error Code: " + httpCode);
                 return false;
             }
         } catch (Exception e) {

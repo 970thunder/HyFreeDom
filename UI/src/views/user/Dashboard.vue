@@ -27,16 +27,9 @@
 		<div class="grid cols-2" style="margin-top:16px;">
 			<div class="card">
 				<h3>快速申请</h3>
-				<div v-if="!isVerified" class="warning-text"
-					style="color: #e6a23c; font-size: 13px; margin-bottom: 10px;">
-					<span style="margin-right: 4px;">⚠️</span>
-					<span>需实名认证后方可申请</span>
-					<router-link to="/user/profile" style="margin-left: 8px; color: #409eff;">去认证</router-link>
-				</div>
 				<div class="form">
 					<div class="row">
-						<select class="select" v-model="quickApply.zoneId" style="max-width: 260px;"
-							:disabled="!isVerified">
+						<select class="select" v-model="quickApply.zoneId" style="max-width: 260px;">
 							<option value="">选择域名（已启用）</option>
 							<option v-for="zone in availableZones" :key="zone.id" :value="zone.id">
 								{{ zone.name }}

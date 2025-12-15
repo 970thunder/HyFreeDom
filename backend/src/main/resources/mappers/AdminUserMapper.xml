@@ -9,46 +9,30 @@
 		<result property="points" column="points" />
 		<result property="role" column="role" />
 		<result property="status" column="status" />
-		<result property="isVerified" column="is_verified" />
 		<result property="ipAddress" column="ip_address" />
 		<result property="createdAt" column="created_at" />
 	</resultMap>
 
 	<select id="list" resultMap="UserMap">
-		SELECT u.id, u.username, u.email, u.display_name, u.points, u.role, u.status, u.ip_address, u.created_at,
-		       COALESCE(up.is_verified, 0) as is_verified
-		FROM users u
-		LEFT JOIN user_profiles up ON u.id = up.user_id
+		SELECT id,username,email,display_name,points,role,status,ip_address,created_at FROM users
 		<where>
-			<if test="status!=null">u.status=#{status}</if>
+			<if test="status!=null">status=#{status}</if>
 			<if test="role!=null and role!=''">
-				AND u.role=#{role}
-			</if>
-			<if test="isVerified!=null">
-				AND COALESCE(up.is_verified, 0)=#{isVerified}
-			</if>
-			<if test="keyword!=null and keyword!=''">
-				AND (u.username LIKE CONCAT('%', #{keyword}, '%') OR u.email LIKE CONCAT('%', #{keyword}, '%'))
+				<if test="status!=null"> AND </if>
+				role=#{role}
 			</if>
 		</where>
-		ORDER BY u.id DESC
+		ORDER BY id DESC
 		<if test="size!=null"> LIMIT #{offset}, #{size}</if>
 	</select>
 
 	<select id="count" resultType="int">
-		SELECT COUNT(1) 
-		FROM users u
-		LEFT JOIN user_profiles up ON u.id = up.user_id
+		SELECT COUNT(1) FROM users
 		<where>
-			<if test="status!=null">u.status=#{status}</if>
+			<if test="status!=null">status=#{status}</if>
 			<if test="role!=null and role!=''">
-				AND u.role=#{role}
-			</if>
-			<if test="isVerified!=null">
-				AND COALESCE(up.is_verified, 0)=#{isVerified}
-			</if>
-			<if test="keyword!=null and keyword!=''">
-				AND (u.username LIKE CONCAT('%', #{keyword}, '%') OR u.email LIKE CONCAT('%', #{keyword}, '%'))
+				<if test="status!=null"> AND </if>
+				role=#{role}
 			</if>
 		</where>
 	</select>

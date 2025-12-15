@@ -366,7 +366,7 @@ const handleVerification = async () => {
                 verificationDialogVisible.value = false
                 loadVerificationStatus()
                 // 刷新页面状态，可能影响导航栏等
-                authStore.refreshUserInfo()
+                authStore.fetchUserInfo()
             } catch (error) {
                 console.error(error)
                 ElMessage.error(error.message || '认证失败')

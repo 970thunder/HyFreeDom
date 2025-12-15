@@ -10,7 +10,6 @@ public class AdminUser {
     private Integer points;
     private String role;
     private Integer status;
-    private Integer isVerified;
     private String ipAddress;
     private LocalDateTime createdAt;
 
@@ -68,14 +67,6 @@ public class AdminUser {
 
     public void setStatus(Integer status) {
         this.status = status;
-    }
-
-    public Integer getIsVerified() {
-        return isVerified;
-    }
-
-    public void setIsVerified(Integer isVerified) {
-        this.isVerified = isVerified;
     }
 
     public String getIpAddress() {
