@@ -52,7 +52,11 @@
 					<tbody>
 						<tr v-for="user in users" :key="user.id">
 							<td>{{ user.id }}</td>
-							<td>{{ user.username }}</td>
+							<td>
+								<a href="javascript:void(0)" @click="viewUserDomains(user)" class="username-link">
+									{{ user.username }}
+								</a>
+							</td>
 							<td>{{ user.email }}</td>
 							<td>
 								<span class="badge" :class="user.isVerified ? 'success' : 'info'">
@@ -206,6 +210,40 @@
 				</div>
 			</template>
 		</el-dialog>
+
+		<!-- 查看用户域名对话框 -->
+		<el-dialog :model-value="viewDomainsDialogVisible" @update:model-value="viewDomainsDialogVisible = $event"
+			:title="`用户 ${currentUser.username} 的域名列表`" width="600px">
+			<div v-loading="isLoadingDomains">
+				<div v-if="userDomains.length > 0">
+					<p style="margin-bottom: 15px;">共 {{ domainCount }} 个域名：</p>
+					<table class="table" style="font-size: 13px;">
+						<thead>
+							<tr>
+								<th>域名</th>
+								<th>类型</th>
+								<th>备注</th>
+								<th>创建时间</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr v-for="domain in userDomains" :key="domain.id">
+								<td>{{ domain.fullDomain }}</td>
+								<td>{{ domain.type || 'A' }}</td>
+								<td>{{ domain.remark || '-' }}</td>
+								<td>{{ formatDate(domain.createdAt) }}</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<div v-else class="empty-state" style="padding: 20px;">
+					<p>该用户暂无域名</p>
+				</div>
+			</div>
+			<template #footer>
+				<el-button @click="viewDomainsDialogVisible = false">关闭</el-button>
+			</template>
+		</el-dialog>
 	</main>
 </template>
 
@@ -225,6 +263,9 @@ const users = ref([])
 const total = ref(0)
 const pointsDialogVisible = ref(false)
 const pointsFormRef = ref()
+
+// 查看域名相关
+const viewDomainsDialogVisible = ref(false)
 
 // 注销用户相关
 const deleteUserDialogVisible = ref(false)
@@ -513,6 +554,18 @@ const getStatusClass = (status) => {
 }
 
 // 组件挂载时初始化
+// 查看用户域名
+const viewUserDomains = async (user) => {
+	currentUser.value = {
+		username: user.username,
+		displayName: user.displayName || user.username
+	}
+	userDomains.value = []
+	domainCount.value = 0
+	viewDomainsDialogVisible.value = true
+	await loadUserDomains(user.id)
+}
+
 // 注销用户
 const deleteUser = async (user) => {
 	try {
@@ -809,6 +862,16 @@ onMounted(() => {
 	font-size: 12px;
 	color: #64748b;
 	margin-top: 4px;
+}
+
+.username-link {
+	color: #6366f1;
+	text-decoration: none;
+	font-weight: 500;
+}
+
+.username-link:hover {
+	text-decoration: underline;
 }
 
 /* 响应式：表格与筛选区域在移动端更友好 */

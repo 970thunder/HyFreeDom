@@ -16,6 +16,10 @@
         SELECT * FROM user_profiles WHERE user_id = #{userId}
     </select>
 
+    <select id="findByIdCard" resultMap="UserProfileResult">
+        SELECT * FROM user_profiles WHERE id_card = #{idCard} LIMIT 1
+    </select>
+
     <insert id="insert" parameterType="com.domaindns.auth.entity.UserProfile">
         INSERT INTO user_profiles (user_id, real_name, id_card, is_verified, verified_at, created_at, updated_at)
         VALUES (#{userId}, #{realName}, #{idCard}, #{isVerified}, #{verifiedAt}, NOW(), NOW())

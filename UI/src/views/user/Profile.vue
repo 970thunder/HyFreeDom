@@ -23,7 +23,7 @@
                     <div class="info-item">
                         <span class="label">状态：</span>
                         <span class="badge" :class="getStatusClass(userInfo.status)">{{ getStatusText(userInfo.status)
-                        }}</span>
+                            }}</span>
                     </div>
                     <div class="info-item">
                         <span class="label">实名认证：</span>
@@ -354,24 +354,65 @@ const showVerificationDialog = () => {
     verificationForm.value.idCard = ''
 }
 
+// 格式化身份证号显示
+const formatIdCardDisplay = (idCard) => {
+    if (!idCard) return ''
+    // 移除可能存在的空格
+    const cleanId = idCard.replace(/\s+/g, '')
+    // 6-4-4-4 格式
+    return cleanId.replace(/^(\d{6})(\d{4})(\d{4})(.+)$/, '$1 $2 $3 $4')
+}
+
 // 提交认证
 const handleVerification = async () => {
     if (!verificationFormRef.value) return
     await verificationFormRef.value.validate(async (valid) => {
         if (valid) {
-            isVerifying.value = true
+            // 二次确认弹窗
             try {
-                await apiPost('/api/user/verification', verificationForm.value, { token: authStore.token })
-                ElMessage.success('实名认证成功')
-                verificationDialogVisible.value = false
-                loadVerificationStatus()
-                // 刷新页面状态，可能影响导航栏等
-                authStore.fetchUserInfo()
-            } catch (error) {
-                console.error(error)
-                ElMessage.error(error.message || '认证失败')
-            } finally {
-                isVerifying.value = false
+                await ElMessageBox.confirm(
+                    `
+                    <div style="text-align: center;">
+                        <p style="margin-bottom: 10px; font-size: 16px;">请仔细核对以下信息</p>
+                        <div style="background: #f8fafc; padding: 15px; border-radius: 8px; text-align: left; display: inline-block; min-width: 280px;">
+                            <p style="margin: 5px 0;"><strong>姓名：</strong> ${verificationForm.value.realName}</p>
+                            <p style="margin: 5px 0;"><strong>身份证号：</strong></p>
+                            <p style="font-family: monospace; font-size: 18px; color: #4f46e5; margin: 5px 0; letter-spacing: 1px;">
+                                ${formatIdCardDisplay(verificationForm.value.idCard)}
+                            </p>
+                        </div>
+                        <p style="margin-top: 15px; color: #ef4444; font-size: 13px;">
+                            <i class="el-icon-warning"></i> 提示：每天仅有一次认证机会，请确保信息准确无误
+                        </p>
+                    </div>
+                    `,
+                    '确认实名信息',
+                    {
+                        confirmButtonText: '确认无误，提交认证',
+                        cancelButtonText: '返回修改',
+                        dangerouslyUseHTMLString: true,
+                        customClass: 'verification-confirm-dialog',
+                        width: '400px'
+                    }
+                )
+
+                // 用户确认后，继续提交
+                isVerifying.value = true
+                try {
+                    await apiPost('/api/user/verification', verificationForm.value, { token: authStore.token })
+                    ElMessage.success('实名认证成功')
+                    verificationDialogVisible.value = false
+                    loadVerificationStatus()
+                    // 刷新页面状态，可能影响导航栏等
+                    authStore.fetchUserInfo()
+                } catch (error) {
+                    console.error(error)
+                    ElMessage.error(error.message || '认证失败')
+                } finally {
+                    isVerifying.value = false
+                }
+            } catch (action) {
+                // 用户取消或关闭弹窗，不做任何操作
             }
         }
     })

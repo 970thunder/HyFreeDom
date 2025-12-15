@@ -6,7 +6,9 @@ import com.domaindns.auth.entity.UserProfile;
 import com.domaindns.auth.mapper.UserProfileMapper;
 import com.domaindns.common.EncryptionUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,11 +20,15 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class VerificationService {
 
     private final UserProfileMapper userProfileMapper;
+
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
 
     @Value("${aliyun.api.appcode:}")
     private String appCode;
@@ -38,6 +44,35 @@ public class VerificationService {
         if (existing != null && existing.getIsVerified() == 1) {
             throw new IllegalArgumentException("已完成实名认证，无需重复认证");
         }
+
+        // Check rate limit (1 attempt per 24 hours)
+        String limitKey = "verification:limit:" + userId;
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(limitKey))) {
+            throw new IllegalArgumentException("24小时内只能进行一次实名认证，请稍后再试");
+        }
+
+        // Check if ID card is already used by another user
+        try {
+            String encryptedIdCard = EncryptionUtil.encrypt(req.idCard);
+            UserProfile duplicateProfile = userProfileMapper.findByIdCard(encryptedIdCard);
+
+            // If duplicate exists and it's verified (isVerified=1)
+            // And it's not the current user (although we checked by userId above, this is a
+            // safeguard)
+            if (duplicateProfile != null && duplicateProfile.getIsVerified() == 1) {
+                if (!duplicateProfile.getUserId().equals(userId)) {
+                    throw new IllegalArgumentException("该身份证号已被其他账号认证，请勿重复使用");
+                }
+            }
+        } catch (Exception e) {
+            if (e instanceof IllegalArgumentException) {
+                throw (IllegalArgumentException) e;
+            }
+            throw new RuntimeException("系统错误：预检查失败", e);
+        }
+
+        // Record attempt (regardless of outcome, to prevent spam/cost)
+        redisTemplate.opsForValue().set(limitKey, "1", 24, TimeUnit.HOURS);
 
         // 2. Call Aliyun API
         boolean isValid = callAliyunApi(req.realName, req.idCard);

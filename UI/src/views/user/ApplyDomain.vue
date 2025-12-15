@@ -574,9 +574,6 @@ onMounted(() => {
 }
 
 @media (min-width: 1200px) and (max-width: 1399px) {
-	.apply-domain-container {
-		padding: 32px 48px;
-	}
 
 	.card {
 		padding: 28px;

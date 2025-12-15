@@ -62,6 +62,12 @@
 				<div v-if="!isLoading && invites.length === 0" class="empty-state">
 					<p>暂无邀请码数据</p>
 				</div>
+
+				<!-- 分页 -->
+				<el-pagination v-if="!isLoading && total > 0" class="pagination" background
+					layout="prev, pager, next, sizes, total" :total="total" :page-size="filters.size"
+					:current-page="filters.page" :page-sizes="[10, 20, 30, 50]" @current-change="onPageChange"
+					@size-change="onSizeChange" />
 			</div>
 		</div>
 
@@ -139,6 +145,7 @@ const authStore = useAuthStore()
 // 响应式数据
 const isLoading = ref(false)
 const invites = ref([])
+const total = ref(0)
 const users = ref([])
 const createDialogVisible = ref(false)
 const detailDialogVisible = ref(false)
@@ -192,6 +199,7 @@ const loadInvites = async () => {
 
 		const response = await apiGet(`/api/admin/invites?${params.toString()}`, { token: authStore.adminToken })
 		invites.value = response.data?.list || []
+		total.value = response.data?.total || invites.value.length
 	} catch (error) {
 		ElMessage.error('加载邀请码列表失败: ' + error.message)
 	} finally {
@@ -217,6 +225,18 @@ const onSearchInput = () => {
 	searchTimeout = setTimeout(() => {
 		loadInvites()
 	}, 500)
+}
+
+// 分页变更
+const onPageChange = (p) => {
+	filters.page = p
+	loadInvites()
+}
+
+const onSizeChange = (s) => {
+	filters.size = s
+	filters.page = 1
+	loadInvites()
 }
 
 // 显示生成对话框
@@ -326,12 +346,16 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.pagination {
+	margin-top: 16px;
+	justify-content: flex-end;
+}
+
 .card {
 	background: #fff;
 	border: 1px solid #e2e8f0;
-	border-radius: 12px;
+	border-radius: 8px;
 	padding: 16px;
-	box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
 }
 
 .row {

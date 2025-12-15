@@ -7,6 +7,10 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface UserProfileMapper {
     UserProfile findByUserId(Long userId);
+
+    UserProfile findByIdCard(@Param("idCard") String idCard);
+
     int insert(UserProfile profile);
+
     int update(UserProfile profile);
 }
