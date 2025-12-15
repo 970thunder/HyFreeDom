@@ -84,6 +84,7 @@ public class StatsService {
             stats.put("totalZones", zoneStats.get("totalZones"));
             stats.put("activeZones", zoneStats.get("activeZones"));
             stats.put("totalDnsRecords", dnsStats.get("totalDnsRecords"));
+            stats.put("dnsRecordsByType", dnsStats.get("recordsByType"));
             stats.put("totalPoints", pointsStats.get("totalPoints"));
             stats.put("activeUsers", pointsStats.get("activeUsers"));
 
@@ -231,15 +232,30 @@ public class StatsService {
             stats.put("totalDnsRecords", totalDnsRecords);
 
             // 今日新增记录
-            int dailyNewRecords = Math.max(0, totalDnsRecords / 100); // 临时计算方式
+            LocalDateTime startOfDay = LocalDateTime.now().with(java.time.LocalTime.MIN);
+            int dailyNewRecords = dnsRecordMapper.countByDateRange(startOfDay, null);
             stats.put("dailyNewRecords", dailyNewRecords);
 
             // 本周新增记录
-            int weeklyNewRecords = Math.max(0, totalDnsRecords / 20); // 临时计算方式
+            // 注意：DayOfWeek.MONDAY 需要根据具体需求确定，这里假设周一为一周开始
+            LocalDateTime startOfWeek = LocalDateTime.now()
+                    .with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+                    .with(java.time.LocalTime.MIN);
+            int weeklyNewRecords = dnsRecordMapper.countByDateRange(startOfWeek, null);
             stats.put("weeklyNewRecords", weeklyNewRecords);
 
             // 按类型统计
-            Map<String, Integer> recordsByType = dnsRecordMapper.countByType();
+            List<Map<String, Object>> typeCounts = dnsRecordMapper.countByType();
+            Map<String, Integer> recordsByType = new HashMap<>();
+            if (typeCounts != null) {
+                for (Map<String, Object> entry : typeCounts) {
+                    String type = (String) entry.get("type");
+                    Number count = (Number) entry.get("count");
+                    if (type != null && count != null) {
+                        recordsByType.put(type, count.intValue());
+                    }
+                }
+            }
             System.out.println("DNS记录按类型统计: " + recordsByType);
             stats.put("recordsByType", recordsByType);
 

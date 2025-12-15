@@ -79,6 +79,14 @@
 		SELECT COUNT(*) FROM dns_records
 	</select>
 
+	<select id="countByDateRange" resultType="int">
+		SELECT COUNT(*) FROM dns_records
+		WHERE created_at >= #{startDate}
+		<if test="endDate != null">
+			AND created_at &lt;= #{endDate}
+		</if>
+	</select>
+
 	<select id="countByType" resultType="map">
 		SELECT type, COUNT(*) as count 
 		FROM dns_records 

@@ -30,9 +30,26 @@
 		<!-- 图表区域 -->
 		<div class="charts-grid">
 			<RegistrationLineChart title="用户注册统计" api-endpoint="/api/admin/stats/user-registration" />
-			<el-card class="chart-card">
-				<h3>最近 7 天 DNS 变更</h3>
-				<div class="chart-placeholder"></div>
+			<el-card class="chart-card" v-loading="isLoading">
+				<template #header>
+					<div class="card-header">
+						<h3>DNS 记录分布</h3>
+					</div>
+				</template>
+				<div class="record-types-grid" v-if="Object.keys(dnsRecordTypes).length > 0">
+					<div v-for="(count, type) in dnsRecordTypes" :key="type" class="record-type-item">
+						<div class="type-header">
+							<span class="type-name">{{ type }}</span>
+							<span class="type-count">{{ count }}</span>
+						</div>
+						<div class="type-bar">
+							<div class="type-bar-fill" :style="{ width: getPercentage(count) + '%' }"></div>
+						</div>
+					</div>
+				</div>
+				<div v-else class="empty-state">
+					<p>暂无数据</p>
+				</div>
 			</el-card>
 		</div>
 
@@ -153,6 +170,18 @@ const stats = ref([
 // Top Zones 数据
 const topZones = ref([])
 
+// DNS 记录类型分布
+const dnsRecordTypes = ref({})
+
+// 计算百分比（相对于最大值）
+const getPercentage = (count) => {
+	if (!dnsRecordTypes.value) return 0
+	const values = Object.values(dnsRecordTypes.value)
+	if (values.length === 0) return 0
+	const max = Math.max(...values)
+	return max === 0 ? 0 : (count / max) * 100
+}
+
 // 同步状态
 const syncStatus = ref({
 	running: 0,
@@ -254,6 +283,9 @@ const loadStats = async () => {
 
 		stats.value[3].value = data.totalPoints?.toString() || '0'
 		stats.value[3].badge = `活跃用户 ${data.activeUsers || 0}`
+
+		// 更新DNS记录类型分布
+		dnsRecordTypes.value = data.dnsRecordsByType || {}
 
 		// 调试日志已移除
 
@@ -483,12 +515,59 @@ onMounted(() => {
 	font-weight: 600;
 }
 
+/* DNS记录类型分布样式 */
+.record-types-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 16px 24px;
+	padding: 8px 0;
+}
 
-.chart-placeholder {
-	height: 250px;
-	background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 10px, #e2e8f0 10px, #e2e8f0 20px);
-	border-radius: 12px;
-	border: 1px dashed #cbd5e1;
+.record-type-item {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.type-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 13px;
+}
+
+.type-name {
+	color: #64748b;
+	font-weight: 500;
+}
+
+.type-count {
+	color: #0f172a;
+	font-weight: 600;
+}
+
+.type-bar {
+	height: 8px;
+	background-color: #f1f5f9;
+	border-radius: 4px;
+	overflow: hidden;
+	width: 100%;
+}
+
+.type-bar-fill {
+	height: 100%;
+	background-color: #6366f1;
+	border-radius: 4px;
+	transition: width 0.5s ease-out;
+}
+
+.empty-state {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 200px;
+	color: #94a3b8;
+	font-size: 14px;
 }
 
 /* 详细信息区域样式 */
