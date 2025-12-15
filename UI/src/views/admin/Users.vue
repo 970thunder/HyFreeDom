@@ -740,6 +740,7 @@ onMounted(() => {
 	border: 1px solid #e2e8f0;
 	color: #334155;
 	background: #f8fafc;
+	white-space: nowrap;
 }
 
 .badge.success {
