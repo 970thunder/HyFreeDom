@@ -355,6 +355,34 @@ export const useAuthStore = defineStore('auth', {
             }
         },
 
+        // 获取用户信息
+        async fetchUserInfo() {
+            try {
+                if (!this.token) {
+                    return { success: false, message: '未登录' }
+                }
+
+                // Use the standard apiGet utility instead of fetch if possible, 
+                // but since apiGet is not imported, we use fetch or import apiGet.
+                // Looking at the file, apiPost IS imported. Let's import apiGet too.
+                // Wait, apiPost is imported at line 3.
+                // Let's check imports.
+
+                // For now, I'll stick to the existing pattern in refreshUserInfo which uses fetch directly 
+                // (Wait, refreshUserInfo uses fetch directly? That's inconsistent. 
+                // loginUser uses apiPost. Let's check line 3).
+
+                // Line 3: import { apiPost } from '@/utils/api.js'
+                // I should add apiGet to imports if I want to use it.
+                // But simpler: just alias fetchUserInfo to refreshUserInfo or implement it similarly.
+
+                return await this.refreshUserInfo()
+            } catch (error) {
+                console.error('获取用户信息失败:', error)
+                return { success: false, message: error.message }
+            }
+        },
+
         // 刷新用户信息
         async refreshUserInfo() {
             try {

@@ -33,11 +33,13 @@ public class AuthService {
     private final PointsMapper pointsMapper;
     private final InviteMapper inviteMapper;
     private final EmailWhitelistService emailWhitelistService;
+    private final com.domaindns.auth.mapper.UserProfileMapper userProfileMapper;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     public AuthService(UserMapper userMapper, JwtService jwtService, EmailService emailService,
             StringRedisTemplate redis, RateLimiter rateLimiter, SettingsService settingsService,
-            PointsMapper pointsMapper, InviteMapper inviteMapper, EmailWhitelistService emailWhitelistService) {
+            PointsMapper pointsMapper, InviteMapper inviteMapper, EmailWhitelistService emailWhitelistService,
+            com.domaindns.auth.mapper.UserProfileMapper userProfileMapper) {
         this.userMapper = userMapper;
         this.jwtService = jwtService;
         this.emailService = emailService;
@@ -47,6 +49,7 @@ public class AuthService {
         this.pointsMapper = pointsMapper;
         this.inviteMapper = inviteMapper;
         this.emailWhitelistService = emailWhitelistService;
+        this.userProfileMapper = userProfileMapper;
     }
 
     public void sendRegisterCode(String email) {
@@ -91,12 +94,12 @@ public class AuthService {
         return doRegister(username, email, password, "ADMIN", null);
     }
 
-    public LoginResp loginUser(LoginReq req) {
-        return doLogin(req, "USER");
+    public LoginResp loginUser(LoginReq req, String ipAddress) {
+        return doLogin(req, "USER", ipAddress);
     }
 
-    public LoginResp loginAdmin(LoginReq req) {
-        return doLogin(req, "ADMIN");
+    public LoginResp loginAdmin(LoginReq req, String ipAddress) {
+        return doLogin(req, "ADMIN", ipAddress);
     }
 
     private RegisterResp doRegister(String username, String email, String password, String role, String inviteCode) {
@@ -178,7 +181,7 @@ public class AuthService {
         return resp;
     }
 
-    private LoginResp doLogin(LoginReq req, String requiredRole) {
+    private LoginResp doLogin(LoginReq req, String requiredRole, String ipAddress) {
         User u = null;
         if (req.username != null && !req.username.isBlank()) {
             u = userMapper.findByUsername(req.username);
@@ -204,6 +207,11 @@ public class AuthService {
             }
         }
 
+        // 更新 IP 地址
+        if (ipAddress != null) {
+            userMapper.updateIp(u.getId(), ipAddress);
+        }
+
         LoginResp resp = new LoginResp();
         resp.role = u.getRole();
         resp.token = jwtService.issueToken(String.valueOf(u.getId()), u.getRole());
@@ -216,6 +224,10 @@ public class AuthService {
         userInfo.displayName = u.getDisplayName();
         userInfo.points = u.getPoints();
         userInfo.role = u.getRole();
+
+        com.domaindns.auth.entity.UserProfile profile = userProfileMapper.findByUserId(u.getId());
+        userInfo.isVerified = profile != null && profile.getIsVerified() != null && profile.getIsVerified() == 1;
+
         resp.user = userInfo;
 
         return resp;

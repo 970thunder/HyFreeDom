@@ -16,10 +16,12 @@ import java.util.Map;
 public class UserInfoController {
     private final UserMapper userMapper;
     private final JwtService jwtService;
+    private final com.domaindns.auth.mapper.UserProfileMapper userProfileMapper;
 
-    public UserInfoController(UserMapper userMapper, JwtService jwtService) {
+    public UserInfoController(UserMapper userMapper, JwtService jwtService, com.domaindns.auth.mapper.UserProfileMapper userProfileMapper) {
         this.userMapper = userMapper;
         this.jwtService = jwtService;
+        this.userProfileMapper = userProfileMapper;
     }
 
     @GetMapping
@@ -40,6 +42,12 @@ public class UserInfoController {
         userInfo.put("points", user.getPoints());
         userInfo.put("createdAt", user.getCreatedAt());
         userInfo.put("status", getStatusText(user.getStatus()));
+        userInfo.put("role", user.getRole());
+
+        // 获取实名认证状态
+        com.domaindns.auth.entity.UserProfile profile = userProfileMapper.findByUserId(userId);
+        boolean isVerified = profile != null && profile.getIsVerified() != null && profile.getIsVerified() == 1;
+        userInfo.put("isVerified", isVerified);
 
         return ApiResponse.ok(userInfo);
     }

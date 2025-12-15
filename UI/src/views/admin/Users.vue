@@ -19,6 +19,11 @@
 						<option value="USER">USER</option>
 						<option value="ADMIN">ADMIN</option>
 					</select>
+					<select class="select" style="max-width:160px;" v-model="filters.isVerified" @change="loadUsers">
+						<option value="">全部认证状态</option>
+						<option value="1">已认证</option>
+						<option value="0">未认证</option>
+					</select>
 					<select class="select" style="max-width:160px;" v-model="filters.status" @change="loadUsers">
 						<option value="">全部状态</option>
 						<option value="1">启用</option>
@@ -35,8 +40,10 @@
 							<th>ID</th>
 							<th>用户名</th>
 							<th>邮箱</th>
+							<th>IP地址</th>
 							<th>积分</th>
 							<th>角色</th>
+							<th>认证</th>
 							<th>状态</th>
 							<th>注册时间</th>
 							<th class="col-actions">操作</th>
@@ -47,10 +54,16 @@
 							<td>{{ user.id }}</td>
 							<td>{{ user.username }}</td>
 							<td>{{ user.email }}</td>
+							<td>{{ user.ipAddress || '-' }}</td>
 							<td>{{ user.points || 0 }}</td>
 							<td>
 								<span class="badge" :class="user.role === 'ADMIN' ? 'warning' : ''">
 									{{ user.role }}
+								</span>
+							</td>
+							<td>
+								<span class="badge" :class="user.isVerified ? 'success' : 'info'">
+									{{ user.isVerified ? '已认证' : '未认证' }}
 								</span>
 							</td>
 							<td>
@@ -275,6 +288,7 @@ const filters = reactive({
 	keyword: '',
 	role: '',
 	status: '',
+	isVerified: '',
 	page: 1,
 	size: 20
 })
@@ -316,6 +330,9 @@ const loadUsers = async () => {
 		}
 		if (filters.status) {
 			params.append('status', filters.status)
+		}
+		if (filters.isVerified) {
+			params.append('isVerified', filters.isVerified)
 		}
 		params.append('page', filters.page)
 		params.append('size', filters.size)
@@ -615,9 +632,8 @@ onMounted(() => {
 .card {
 	background: #fff;
 	border: 1px solid #e2e8f0;
-	border-radius: 12px;
+	border-radius: 8px;
 	padding: 16px;
-	box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
 }
 
 .row {
@@ -693,7 +709,7 @@ onMounted(() => {
 	width: 100%;
 	border-collapse: collapse;
 	border: 1px solid #e2e8f0;
-	border-radius: 12px;
+	border-radius: 8px;
 	overflow: hidden;
 }
 

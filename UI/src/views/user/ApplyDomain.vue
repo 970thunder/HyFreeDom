@@ -8,7 +8,14 @@
 				<button class="btn outline" @click="refreshZones">刷新域名列表</button>
 			</div>
 
-			<div class="form">
+			<div v-if="!isVerified" class="warning-box"
+				style="margin: 20px; padding: 15px; background-color: #fef0f0; border: 1px solid #fde2e2; border-radius: 4px; color: #f56c6c;">
+				<p>⚠️ 您的账号尚未完成实名认证，无法申请域名。</p>
+				<p>请前往 <router-link to="/user/profile"
+						style="color: #409eff; text-decoration: underline;">个人资料</router-link> 页面进行实名认证。</p>
+			</div>
+
+			<div class="form" v-else>
 				<!-- 主域名和子域名前缀在同一行 -->
 				<div class="grid cols-2">
 					<div class="input-row">
@@ -89,16 +96,19 @@
 </template>
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.js'
 import { apiGet, apiPost } from '@/utils/api.js'
 import { ElMessage } from 'element-plus'
 import SEOHead from '@/components/SEOHead.vue'
 
+const router = useRouter()
 const authStore = useAuthStore()
 
 // 响应式数据
 const isLoading = ref(false)
 const isSubmitting = ref(false)
+const isVerified = ref(false)
 const availableZones = ref([])
 const userBalance = ref(0)
 const defaultTtl = ref(120)
@@ -165,6 +175,18 @@ const loadUserBalance = async () => {
 	} catch (error) {
 		console.error('加载用户积分失败:', error)
 		ElMessage.error('加载用户积分失败: ' + (error.message || '未知错误'))
+	}
+}
+
+// 加载用户信息
+const loadUserInfo = async () => {
+	try {
+		const response = await apiGet('/api/user/info', { token: authStore.token })
+		if (response.data) {
+			isVerified.value = response.data.isVerified
+		}
+	} catch (error) {
+		console.error('加载用户信息失败:', error)
 	}
 }
 
@@ -300,6 +322,12 @@ const submitApplication = async () => {
 		return
 	}
 
+	if (!isVerified.value) {
+		ElMessage.warning('请先完成实名认证')
+		router.push('/user/profile')
+		return
+	}
+
 	isSubmitting.value = true
 	try {
 		const response = await apiPost('/api/user/domains/apply', {
@@ -362,7 +390,8 @@ const initData = async () => {
 		await Promise.all([
 			loadZones(),
 			loadUserBalance(),
-			loadSystemSettings()
+			loadSystemSettings(),
+			loadUserInfo()
 		])
 	} catch (error) {
 		console.error('初始化数据失败:', error)

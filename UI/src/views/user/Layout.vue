@@ -48,7 +48,8 @@
 					</svg>
 					申请域名
 				</router-link>
-				<router-link to="/user/domains" @click="closeMobileMenu" class="nav-link">
+				<a href="javascript:;" @click.prevent="handleRestrictedNav('/user/domains')" class="nav-link"
+					:class="{ 'router-link-active': $route.path === '/user/domains' }">
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<circle cx="12" cy="12" r="10"></circle>
 						<path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
@@ -56,8 +57,9 @@
 						<line x1="15" y1="9" x2="15.01" y2="9"></line>
 					</svg>
 					我的域名
-				</router-link>
-				<router-link to="/user/invite" @click="closeMobileMenu" class="nav-link">
+				</a>
+				<a href="javascript:;" @click.prevent="handleRestrictedNav('/user/invite')" class="nav-link"
+					:class="{ 'router-link-active': $route.path === '/user/invite' }">
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
 						<circle cx="8.5" cy="7" r="4"></circle>
@@ -65,7 +67,7 @@
 						<line x1="23" y1="11" x2="17" y2="11"></line>
 					</svg>
 					邀请
-				</router-link>
+				</a>
 				<router-link to="/user/recharge" @click="closeMobileMenu" class="nav-link">
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<line x1="12" y1="1" x2="12" y2="23"></line>
@@ -137,7 +139,7 @@
 						</svg>
 						申请域名
 					</router-link>
-					<router-link to="/user/domains" class="nav-link"
+					<a href="javascript:;" @click.prevent="handleRestrictedNav('/user/domains')" class="nav-link"
 						:class="{ active: $route.path === '/user/domains' }">
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
 							stroke-width="2">
@@ -147,8 +149,9 @@
 							<line x1="15" y1="9" x2="15.01" y2="9"></line>
 						</svg>
 						我的域名
-					</router-link>
-					<router-link to="/user/invite" class="nav-link" :class="{ active: $route.path === '/user/invite' }">
+					</a>
+					<a href="javascript:;" @click.prevent="handleRestrictedNav('/user/invite')" class="nav-link"
+						:class="{ active: $route.path === '/user/invite' }">
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
 							stroke-width="2">
 							<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -157,7 +160,7 @@
 							<line x1="23" y1="11" x2="17" y2="11"></line>
 						</svg>
 						邀请
-					</router-link>
+					</a>
 					<router-link to="/user/recharge" class="nav-link"
 						:class="{ active: $route.path === '/user/recharge' }">
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -247,11 +250,28 @@ const userInfo = ref({
 	username: '',
 	email: '',
 	createdAt: '',
-	status: ''
+	status: '',
+	isVerified: false
 })
 
 // 公告弹窗
 const showAnnouncementModal = ref(false)
+
+// 限制访问的导航处理
+const handleRestrictedNav = (path) => {
+	if (!userInfo.value.isVerified) {
+		ElMessage.warning('请先完成实名认证')
+		router.push('/user/profile')
+		if (isMobile.value) {
+			closeMobileMenu()
+		}
+	} else {
+		router.push(path)
+		if (isMobile.value) {
+			closeMobileMenu()
+		}
+	}
+}
 
 const checkMobile = () => {
 	isMobile.value = window.innerWidth <= 768

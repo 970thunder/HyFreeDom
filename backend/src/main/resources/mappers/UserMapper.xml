@@ -12,6 +12,7 @@
 		<result property="points" column="points" />
 		<result property="role" column="role" />
 		<result property="status" column="status" />
+		<result property="ipAddress" column="ip_address" />
 		<result property="createdAt" column="created_at" />
 		<result property="updatedAt" column="updated_at" />
 	</resultMap>
@@ -33,8 +34,8 @@
 	</select>
 
 	<insert id="insert" parameterType="com.domaindns.auth.entity.User" useGeneratedKeys="true" keyProperty="id">
-		INSERT INTO users(username, email, password_hash, display_name, invite_code, inviter_id, points, role, status)
-		VALUES(#{username}, #{email}, #{passwordHash}, #{displayName}, #{inviteCode}, #{inviterId}, #{points}, #{role}, #{status})
+		INSERT INTO users(username, email, password_hash, display_name, invite_code, inviter_id, points, role, status, ip_address)
+		VALUES(#{username}, #{email}, #{passwordHash}, #{displayName}, #{inviteCode}, #{inviterId}, #{points}, #{role}, #{status}, #{ipAddress})
 	</insert>
 
 	<update id="updatePassword">
@@ -55,6 +56,10 @@
 
 	<update id="updatePoints">
 		UPDATE users SET points = #{points} WHERE id = #{id}
+	</update>
+
+	<update id="updateIp">
+		UPDATE users SET ip_address = #{ipAddress} WHERE id = #{id}
 	</update>
 
 	<select id="countByDateRange" resultType="int">

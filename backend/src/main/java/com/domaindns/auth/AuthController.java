@@ -14,6 +14,7 @@ import com.domaindns.common.ApiResponse;
 import com.domaindns.common.EmailWhitelistService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -36,6 +37,23 @@ public class AuthController {
         this.jwtService = jwtService;
         this.redis = redis;
         this.emailWhitelistService = emailWhitelistService;
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+        }
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+        return ip;
     }
 
     // ---------------- 邮箱白名单 ----------------
@@ -62,8 +80,9 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
-        LoginResp resp = authService.loginUser(req);
+    public ApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req, HttpServletRequest request) {
+        String ipAddress = getClientIp(request);
+        LoginResp resp = authService.loginUser(req, ipAddress);
         return ApiResponse.ok(resp);
     }
 
@@ -75,8 +94,9 @@ public class AuthController {
     }
 
     @PostMapping("/admin/login")
-    public ApiResponse<LoginResp> adminLogin(@Valid @RequestBody LoginReq req) {
-        LoginResp resp = authService.loginAdmin(req);
+    public ApiResponse<LoginResp> adminLogin(@Valid @RequestBody LoginReq req, HttpServletRequest request) {
+        String ipAddress = getClientIp(request);
+        LoginResp resp = authService.loginAdmin(req, ipAddress);
         return ApiResponse.ok(resp);
     }
 

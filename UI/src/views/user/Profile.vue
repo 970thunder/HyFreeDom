@@ -23,7 +23,27 @@
                     <div class="info-item">
                         <span class="label">状态：</span>
                         <span class="badge" :class="getStatusClass(userInfo.status)">{{ getStatusText(userInfo.status)
-                            }}</span>
+                        }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">实名认证：</span>
+                        <div class="verification-wrapper" style="display: flex; align-items: center; gap: 8px;">
+                            <span class="badge" :class="verificationInfo.isVerified ? 'success' : 'warning'">
+                                {{ verificationInfo.isVerified ? '已认证' : '未认证' }}
+                            </span>
+                            <el-button v-if="!verificationInfo.isVerified" type="primary" link size="small"
+                                @click="showVerificationDialog">
+                                立即认证
+                            </el-button>
+                        </div>
+                    </div>
+                    <div v-if="verificationInfo.isVerified" class="info-item">
+                        <span class="label">真实姓名：</span>
+                        <span class="value">{{ verificationInfo.realName }}</span>
+                    </div>
+                    <div v-if="verificationInfo.isVerified" class="info-item">
+                        <span class="label">身份证号：</span>
+                        <span class="value">{{ verificationInfo.idCard }}</span>
                     </div>
                 </div>
             </div>
@@ -171,6 +191,25 @@
             </div>
         </template>
     </el-dialog>
+
+    <!-- 实名认证对话框 -->
+    <el-dialog v-model="verificationDialogVisible" title="实名认证" :width="dialogWidth" :close-on-click-modal="false">
+        <el-form :model="verificationForm" :rules="verificationRules" ref="verificationFormRef"
+            :label-width="labelWidth">
+            <el-form-item label="真实姓名" prop="realName">
+                <el-input v-model="verificationForm.realName" placeholder="请输入真实姓名" />
+            </el-form-item>
+            <el-form-item label="身份证号" prop="idCard">
+                <el-input v-model="verificationForm.idCard" placeholder="请输入身份证号" />
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <div class="dialog-footer">
+                <el-button @click="verificationDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="handleVerification" :loading="isVerifying">提交认证</el-button>
+            </div>
+        </template>
+    </el-dialog>
 </template>
 
 <script setup>
@@ -203,6 +242,30 @@ const userInfo = ref({
     createdAt: '',
     status: ''
 })
+
+// 实名认证相关
+const verificationInfo = ref({
+    isVerified: false,
+    realName: '',
+    idCard: ''
+})
+const verificationDialogVisible = ref(false)
+const isVerifying = ref(false)
+const verificationForm = ref({
+    realName: '',
+    idCard: ''
+})
+const verificationFormRef = ref(null)
+const verificationRules = {
+    realName: [
+        { required: true, message: '请输入真实姓名', trigger: 'blur' },
+        { min: 2, message: '姓名长度至少2位', trigger: 'blur' }
+    ],
+    idCard: [
+        { required: true, message: '请输入身份证号', trigger: 'blur' },
+        { pattern: /(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)/, message: '请输入正确的身份证号', trigger: 'blur' }
+    ]
+}
 
 // 重置密码相关
 const resetPasswordDialogVisible = ref(false)
@@ -266,9 +329,52 @@ const loadUserInfo = async () => {
     }
 }
 
+// 加载实名认证状态
+const loadVerificationStatus = async () => {
+    try {
+        const response = await apiGet('/api/user/verification', { token: authStore.token })
+        if (response.data) {
+            verificationInfo.value = response.data
+        }
+    } catch (error) {
+        console.error('加载实名认证状态失败:', error)
+    }
+}
+
 // 刷新用户信息
 const refreshUserInfo = () => {
     loadUserInfo()
+    loadVerificationStatus()
+}
+
+// 显示认证对话框
+const showVerificationDialog = () => {
+    verificationDialogVisible.value = true
+    verificationForm.value.realName = ''
+    verificationForm.value.idCard = ''
+}
+
+// 提交认证
+const handleVerification = async () => {
+    if (!verificationFormRef.value) return
+    await verificationFormRef.value.validate(async (valid) => {
+        if (valid) {
+            isVerifying.value = true
+            try {
+                await apiPost('/api/user/verification', verificationForm.value, { token: authStore.token })
+                ElMessage.success('实名认证成功')
+                verificationDialogVisible.value = false
+                loadVerificationStatus()
+                // 刷新页面状态，可能影响导航栏等
+                authStore.refreshUserInfo()
+            } catch (error) {
+                console.error(error)
+                ElMessage.error(error.message || '认证失败')
+            } finally {
+                isVerifying.value = false
+            }
+        }
+    })
 }
 
 // 格式化时间
@@ -434,6 +540,8 @@ const handleDeleteAccount = async () => {
     }
 }
 
+
+
 // 发送重置密码验证码
 const sendResetCode = async () => {
     try {
@@ -503,6 +611,7 @@ const initData = async () => {
     isLoading.value = true
     try {
         await loadUserInfo()
+        await loadVerificationStatus()
     } catch (error) {
         console.error('初始化数据失败:', error)
     } finally {

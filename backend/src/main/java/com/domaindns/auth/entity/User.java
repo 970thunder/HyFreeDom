@@ -13,6 +13,7 @@ public class User {
     private Integer points;
     private String role;
     private Integer status;
+    private String ipAddress;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -94,6 +95,14 @@ public class User {
 
     public void setStatus(Integer status) {
         this.status = status;
+    }
+
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
+    public void setIpAddress(String ipAddress) {
+        this.ipAddress = ipAddress;
     }
 
     public LocalDateTime getCreatedAt() {

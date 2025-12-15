@@ -26,6 +26,8 @@ public interface UserMapper {
 
     int updatePoints(@Param("id") Long id, @Param("points") Integer points);
 
+    int updateIp(@Param("id") Long id, @Param("ipAddress") String ipAddress);
+
     /**
      * 统计指定时间范围内的用户注册数量
      */

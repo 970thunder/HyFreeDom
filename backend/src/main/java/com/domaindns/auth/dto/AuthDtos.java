@@ -49,6 +49,7 @@ public class AuthDtos {
         public String displayName;
         public Integer points;
         public String role;
+        public Boolean isVerified;
     }
 
     public static class ForgotPasswordReq {
@@ -71,5 +72,19 @@ public class AuthDtos {
         @Email(message = "邮箱格式不正确")
         @NotBlank(message = "邮箱必填")
         public String email;
+    }
+
+    public static class VerificationReq {
+        @NotBlank(message = "真实姓名必填")
+        public String realName;
+        @NotBlank(message = "身份证号必填")
+        public String idCard;
+    }
+
+    public static class VerificationStatusResp {
+        public boolean isVerified;
+        public String realName; // Masked
+        public String idCard; // Masked
+        public String verifiedAt;
     }
 }

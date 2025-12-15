@@ -1,6 +1,7 @@
 <template>
-    <el-dialog :model-value="visible" @update:model-value="$emit('update:visible', $event)" title="系统公告" width="600px"
-        :close-on-click-modal="false" :close-on-press-escape="false" :show-close="false" class="announcement-modal">
+    <el-dialog :model-value="visible" @update:model-value="$emit('update:visible', $event)" title="系统公告" width="60%"
+        :close-on-click-modal="false" :close-on-press-escape="false" :show-close="false" class="announcement-modal"
+        align-center>
         <div class="announcement-content">
             <div v-if="announcements.length === 0" class="empty-state">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" style="color: #9ca3af;">
@@ -13,28 +14,38 @@
                 <p>暂无公告</p>
             </div>
 
-            <div v-else class="announcement-list">
-                <div v-for="announcement in announcements" :key="announcement.id" class="announcement-item">
-                    <div class="announcement-header">
-                        <div class="announcement-title">
-                            <span class="priority-badge" :class="getPriorityClass(announcement.priority)">
-                                {{ getPriorityText(announcement.priority) }}
+            <div v-else class="announcement-tabs-container">
+                <el-tabs v-model="activeTab" type="card" class="announcement-tabs">
+                    <el-tab-pane v-for="announcement in announcements" :key="announcement.id" :name="announcement.id">
+                        <template #label>
+                            <span class="tab-label">
+                                <span class="priority-dot" :class="getPriorityClass(announcement.priority)"></span>
+                                {{ announcement.title }}
                             </span>
-                            {{ announcement.title }}
+                        </template>
+                        <div class="announcement-detail">
+                            <div class="announcement-header">
+                                <div class="announcement-title-large">
+                                    <span class="priority-badge" :class="getPriorityClass(announcement.priority)">
+                                        {{ getPriorityText(announcement.priority) }}
+                                    </span>
+                                    {{ announcement.title }}
+                                </div>
+                                <div class="announcement-meta">
+                                    <span class="publish-time">发布时间：{{ formatTime(announcement.publishedAt) }}</span>
+                                </div>
+                            </div>
+                            <div class="announcement-body" v-html="announcement.content"></div>
                         </div>
-                        <div class="announcement-meta">
-                            <span class="publish-time">{{ formatTime(announcement.publishedAt) }}</span>
-                        </div>
-                    </div>
-                    <div class="announcement-body" v-html="announcement.content"></div>
-                </div>
+                    </el-tab-pane>
+                </el-tabs>
             </div>
         </div>
 
         <template #footer>
             <div class="dialog-footer">
                 <el-button @click="viewAllAnnouncements" type="primary" plain>
-                    查看全部公告
+                    查看更多历史公告
                 </el-button>
                 <el-button @click="confirmRead" type="primary">
                     我知道了
@@ -66,13 +77,30 @@ const emit = defineEmits(['update:visible', 'confirm'])
 // 响应式数据
 const announcements = ref([])
 const isLoading = ref(false)
+const activeTab = ref('')
 
 // 加载公告
 const loadAnnouncements = async () => {
     try {
         isLoading.value = true
-        const response = await apiGet('/api/admin/announcements/published?limit=5')
-        announcements.value = response.data || []
+        // 增加获取数量，以便在标签页中展示更多
+        const response = await apiGet('/api/admin/announcements/published?limit=10')
+        let data = response.data || []
+
+        // 按紧急程度排序（3:紧急 > 2:重要 > 1:普通），同级按时间倒序
+        data.sort((a, b) => {
+            if (b.priority !== a.priority) {
+                return b.priority - a.priority
+            }
+            return new Date(b.publishedAt) - new Date(a.publishedAt)
+        })
+
+        announcements.value = data
+
+        // 默认选中第一个
+        if (data.length > 0) {
+            activeTab.value = data[0].id
+        }
     } catch (error) {
         console.error('加载公告失败:', error)
         ElMessage.error('加载公告失败')
@@ -133,10 +161,15 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.announcement-modal :deep(.el-dialog) {
+    /* 移除固定宽度，使用百分比，但在小屏幕下保持响应式 */
+    max-width: 95vw;
+}
+
 .announcement-modal :deep(.el-dialog__header) {
     background: #f8fafc;
     border-bottom: 1px solid #e2e8f0;
-    padding: 16px 20px;
+    padding: 16px 24px;
 }
 
 .announcement-modal :deep(.el-dialog__title) {
@@ -146,26 +179,32 @@ onMounted(() => {
 }
 
 .announcement-modal :deep(.el-dialog__body) {
-    padding: 20px;
-    max-height: 60vh;
-    overflow-y: auto;
+    padding: 24px;
+    height: 60vh;
+    /* 固定高度比例，配合 scroll */
+    display: flex;
+    flex-direction: column;
 }
 
 .announcement-modal :deep(.el-dialog__footer) {
     background: #f8fafc;
     border-top: 1px solid #e2e8f0;
-    padding: 16px 20px;
+    padding: 16px 24px;
 }
 
 .announcement-content {
-    max-height: 50vh;
-    overflow-y: auto;
+    flex: 1;
+    overflow: hidden;
+    /* 内容区域溢出隐藏，由内部 tabs 处理滚动 */
+    display: flex;
+    flex-direction: column;
 }
 
 .empty-state {
     text-align: center;
     padding: 40px 20px;
     color: #64748b;
+    margin: auto;
 }
 
 .empty-state svg {
@@ -177,41 +216,75 @@ onMounted(() => {
     font-size: 16px;
 }
 
-.announcement-list {
+/* Tabs 样式定制 */
+.announcement-tabs-container {
+    height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 16px;
 }
 
-.announcement-item {
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 16px;
-    background: #fff;
+.announcement-tabs {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.announcement-tabs :deep(.el-tabs__header) {
+    margin-bottom: 20px;
+}
+
+.announcement-tabs :deep(.el-tabs__content) {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 10px;
+    /* 滚动条间距 */
+}
+
+.tab-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.priority-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* 公告详情样式 */
+.announcement-detail {
+    padding: 0 4px;
 }
 
 .announcement-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 16px;
+    margin-bottom: 20px;
 }
 
-.announcement-title {
+.announcement-title-large {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    color: #0f172a;
-    flex: 1;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
 }
 
 .priority-badge {
-    padding: 4px 8px;
+    padding: 4px 10px;
     border-radius: 4px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
+    flex-shrink: 0;
 }
 
 .priority-normal {
@@ -219,9 +292,17 @@ onMounted(() => {
     color: #64748b;
 }
 
+.priority-dot.priority-normal {
+    background-color: #94a3b8;
+}
+
 .priority-important {
     background-color: #fef3c7;
     color: #92400e;
+}
+
+.priority-dot.priority-important {
+    background-color: #f59e0b;
 }
 
 .priority-urgent {
@@ -229,115 +310,39 @@ onMounted(() => {
     color: #dc2626;
 }
 
-.announcement-meta {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+.priority-dot.priority-urgent {
+    background-color: #ef4444;
 }
 
-.publish-time {
+.announcement-meta {
+    color: #64748b;
     font-size: 14px;
-    color: #94a3b8;
 }
 
 .announcement-body {
-    color: #475569;
-    line-height: 1.6;
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-.announcement-body h1,
-.announcement-body h2,
-.announcement-body h3,
-.announcement-body h4,
-.announcement-body h5,
-.announcement-body h6 {
-    margin: 0 0 8px 0;
-    font-weight: 600;
-    color: #0f172a;
-}
-
-.announcement-body h1 {
-    font-size: 18px;
-}
-
-.announcement-body h2 {
-    font-size: 16px;
-}
-
-.announcement-body h3 {
+    color: #334155;
+    line-height: 1.7;
     font-size: 15px;
 }
 
-.announcement-body h4 {
-    font-size: 14px;
-}
-
-.announcement-body h5 {
-    font-size: 13px;
-}
-
-.announcement-body h6 {
-    font-size: 12px;
-}
-
-.announcement-body p {
-    margin: 0 0 8px 0;
-}
-
-.announcement-body ul,
-.announcement-body ol {
-    margin: 0 0 8px 0;
-    padding-left: 20px;
-}
-
-.announcement-body li {
-    margin: 0 0 4px 0;
-}
-
-.announcement-body a {
-    color: #6366f1;
-    text-decoration: none;
-}
-
-.announcement-body a:hover {
-    text-decoration: underline;
-}
-
-.announcement-body img {
+.announcement-body :deep(img) {
     max-width: 100%;
     height: auto;
-    border-radius: 4px;
+    border-radius: 6px;
+    margin: 10px 0;
 }
 
-.announcement-body blockquote {
-    margin: 0 0 8px 0;
-    padding: 8px 12px;
-    background: #f8fafc;
-    border-left: 4px solid #e2e8f0;
-    border-radius: 0 4px 4px 0;
+.announcement-body :deep(p) {
+    margin-bottom: 12px;
 }
 
-.announcement-body code {
-    background: #f1f5f9;
-    padding: 2px 4px;
-    border-radius: 3px;
-    font-family: 'Courier New', monospace;
-    font-size: 0.9em;
-}
-
-.announcement-body pre {
-    background: #f1f5f9;
-    padding: 12px;
-    border-radius: 4px;
-    overflow-x: auto;
-    margin: 0 0 8px 0;
-}
-
-.announcement-body pre code {
-    background: none;
-    padding: 0;
+.announcement-body :deep(h1),
+.announcement-body :deep(h2),
+.announcement-body :deep(h3) {
+    margin-top: 20px;
+    margin-bottom: 12px;
+    color: #0f172a;
+    font-weight: 600;
 }
 
 .dialog-footer {
@@ -346,196 +351,19 @@ onMounted(() => {
     gap: 12px;
 }
 
-/* 响应式设计 */
-@media (max-width: 1200px) {
-    .announcement-modal :deep(.el-dialog) {
-        width: 80% !important;
-    }
-}
-
-@media (max-width: 992px) {
-    .announcement-modal :deep(.el-dialog) {
-        width: 85% !important;
-    }
-
-    .announcement-modal :deep(.el-dialog__body) {
-        padding: 18px;
-    }
-}
-
+/* 响应式调整 */
 @media (max-width: 768px) {
     .announcement-modal :deep(.el-dialog) {
-        width: 95% !important;
-        margin: 0 auto;
+        width: 90% !important;
+        /* 手机端宽度占比更大 */
     }
 
-    .announcement-modal :deep(.el-dialog__header) {
-        padding: 12px 16px;
+    .announcement-title-large {
+        font-size: 18px;
     }
 
-    .announcement-modal :deep(.el-dialog__title) {
-        font-size: 16px;
-    }
-
-    .announcement-modal :deep(.el-dialog__body) {
-        padding: 16px;
-        max-height: 50vh;
-    }
-
-    .announcement-modal :deep(.el-dialog__footer) {
-        padding: 12px 16px;
-    }
-
-    .announcement-content {
-        max-height: 40vh;
-    }
-
-    .announcement-header {
-        flex-direction: column;
-        gap: 8px;
-        align-items: flex-start;
-    }
-
-    .announcement-title {
-        font-size: 14px;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
-    }
-
-    .announcement-meta {
-        align-self: flex-start;
-    }
-
-    .announcement-body {
-        max-height: 150px;
-        font-size: 14px;
-    }
-
-    .dialog-footer {
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .dialog-footer .el-button {
-        width: 100%;
-    }
-
-    .empty-state {
-        padding: 30px 16px;
-    }
-
-    .empty-state svg {
-        width: 40px;
-        height: 40px;
-        margin-bottom: 12px;
-    }
-
-    .empty-state p {
-        font-size: 14px;
-    }
-}
-
-@media (max-width: 480px) {
-    .announcement-modal :deep(.el-dialog) {
-        width: 98% !important;
-        margin: 5px auto;
-    }
-
-    .announcement-modal :deep(.el-dialog__header) {
-        padding: 10px 12px;
-    }
-
-    .announcement-modal :deep(.el-dialog__title) {
-        font-size: 15px;
-    }
-
-    .announcement-modal :deep(.el-dialog__body) {
-        padding: 12px;
-        max-height: 45vh;
-    }
-
-    .announcement-modal :deep(.el-dialog__footer) {
-        padding: 10px 12px;
-    }
-
-    .announcement-content {
-        max-height: 35vh;
-    }
-
-    .announcement-item {
-        padding: 12px;
-    }
-
-    .announcement-title {
-        font-size: 13px;
-    }
-
-    .announcement-body {
-        max-height: 120px;
-        font-size: 13px;
-    }
-
-    .priority-badge {
-        padding: 3px 6px;
-        font-size: 11px;
-    }
-
-    .publish-time {
-        font-size: 12px;
-    }
-
-    .empty-state {
-        padding: 20px 12px;
-    }
-
-    .empty-state svg {
-        width: 36px;
-        height: 36px;
-        margin-bottom: 10px;
-    }
-
-    .empty-state p {
-        font-size: 13px;
-    }
-}
-
-/* 超小屏幕优化 */
-@media (max-width: 360px) {
-    .announcement-modal :deep(.el-dialog) {
-        width: 100% !important;
-        margin: 0;
-        border-radius: 0;
-    }
-
-    .announcement-modal :deep(.el-dialog__header) {
-        padding: 8px 10px;
-    }
-
-    .announcement-modal :deep(.el-dialog__body) {
-        padding: 10px;
-        max-height: 40vh;
-    }
-
-    .announcement-modal :deep(.el-dialog__footer) {
-        padding: 8px 10px;
-    }
-
-    .announcement-content {
-        max-height: 30vh;
-    }
-
-    .announcement-item {
-        padding: 10px;
-    }
-
-    .announcement-title {
-        font-size: 12px;
-    }
-
-    .announcement-body {
-        max-height: 100px;
-        font-size: 12px;
+    .tab-label {
+        max-width: 120px;
     }
 }
 </style>

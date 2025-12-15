@@ -27,9 +27,16 @@
 		<div class="grid cols-2" style="margin-top:16px;">
 			<div class="card">
 				<h3>快速申请</h3>
+				<div v-if="!isVerified" class="warning-text"
+					style="color: #e6a23c; font-size: 13px; margin-bottom: 10px;">
+					<span style="margin-right: 4px;">⚠️</span>
+					<span>需实名认证后方可申请</span>
+					<router-link to="/user/profile" style="margin-left: 8px; color: #409eff;">去认证</router-link>
+				</div>
 				<div class="form">
 					<div class="row">
-						<select class="select" v-model="quickApply.zoneId" style="max-width: 260px;">
+						<select class="select" v-model="quickApply.zoneId" style="max-width: 260px;"
+							:disabled="!isVerified">
 							<option value="">选择域名（已启用）</option>
 							<option v-for="zone in availableZones" :key="zone.id" :value="zone.id">
 								{{ zone.name }}
@@ -76,15 +83,18 @@
 </template>
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.js'
 import { apiGet, apiPost } from '@/utils/api.js'
 import { ElMessage } from 'element-plus'
 
+const router = useRouter()
 const authStore = useAuthStore()
 
 // 响应式数据
 const isLoading = ref(false)
 const isApplying = ref(false)
+const isVerified = ref(false)
 const userStats = ref({
 	balance: 0,
 	weeklyChange: 0,
@@ -94,13 +104,37 @@ const userStats = ref({
 const availableZones = ref([])
 const recentDomains = ref([])
 const inviteCode = ref('')
-const domainCost = ref(5)
+const baseCost = ref(10) // 基础积分消耗
 
 // 快速申请表单
 const quickApply = ref({
 	zoneId: '',
 	prefix: '',
 	value: ''
+})
+
+// 计算选中区域
+const selectedZone = computed(() => {
+	return availableZones.value.find(zone => zone.id == quickApply.value.zoneId)
+})
+
+// 计算消耗积分 - 按照ApplyDomain.vue的逻辑
+const domainCost = computed(() => {
+	if (!selectedZone.value) return baseCost.value
+
+	const domain = selectedZone.value.name.toLowerCase()
+	let multiplier = 1.0
+
+	// 根据域名后缀计算倍数
+	if (domain.endsWith('.cn') || domain.endsWith('.com')) {
+		multiplier = 2.0  // .cn / .com：2.0倍
+	} else if (domain.endsWith('.top')) {
+		multiplier = 1.5  // .top：1.5倍
+	} else {
+		multiplier = 1.0  // 其它：1.0倍
+	}
+
+	return Math.floor(baseCost.value * multiplier)
 })
 
 // 计算属性
@@ -178,16 +212,31 @@ const loadInviteCode = async () => {
 	}
 }
 
+// 加载用户信息
+const loadUserInfo = async () => {
+	try {
+		const response = await apiGet('/api/user/info', { token: authStore.token })
+		if (response.data) {
+			isVerified.value = response.data.isVerified
+		}
+	} catch (error) {
+		console.error('加载用户信息失败:', error)
+	}
+}
+
 // 加载系统设置
 const loadSystemSettings = async () => {
 	try {
-		const response = await apiGet('/api/admin/settings', { token: authStore.adminToken })
+		const response = await apiGet('/api/user/settings', { token: authStore.token })
 		if (response.data) {
-			domainCost.value = parseInt(response.data.domain_cost_points) || 5
+			baseCost.value = parseInt(response.data.domain_cost_points) || 10
 			userStats.value.maxDomains = parseInt(response.data.max_domains_per_user) || 5
 		}
 	} catch (error) {
 		console.error('加载系统设置失败:', error)
+		// 如果接口失败，使用默认值
+		baseCost.value = 10
+		userStats.value.maxDomains = 5
 	}
 }
 
@@ -195,6 +244,12 @@ const loadSystemSettings = async () => {
 const handleQuickApply = async () => {
 	if (!canApply.value) {
 		ElMessage.warning('请填写完整的申请信息')
+		return
+	}
+
+	if (!isVerified.value) {
+		ElMessage.warning('请先完成实名认证')
+		router.push('/user/profile')
 		return
 	}
 
@@ -276,7 +331,8 @@ const initData = async () => {
 			loadAvailableZones(),
 			loadRecentDomains(),
 			loadInviteCode(),
-			loadSystemSettings()
+			loadSystemSettings(),
+			loadUserInfo()
 		])
 	} catch (error) {
 		console.error('初始化数据失败:', error)

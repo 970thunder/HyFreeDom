@@ -1,6 +1,7 @@
 package com.domaindns.user.controller;
 
 import com.domaindns.auth.service.JwtService;
+import com.domaindns.auth.service.VerificationService;
 import com.domaindns.common.ApiResponse;
 import com.domaindns.user.service.UserInviteService;
 import com.domaindns.user.mapper.PointsMapper;
@@ -17,17 +18,27 @@ public class UserInviteController {
     private final UserInviteService service;
     private final JwtService jwtService;
     private final PointsMapper pointsMapper;
+    private final VerificationService verificationService;
 
-    public UserInviteController(UserInviteService service, JwtService jwtService, PointsMapper pointsMapper) {
+    public UserInviteController(UserInviteService service, JwtService jwtService, PointsMapper pointsMapper,
+            VerificationService verificationService) {
         this.service = service;
         this.jwtService = jwtService;
         this.pointsMapper = pointsMapper;
+        this.verificationService = verificationService;
+    }
+
+    private void checkVerified(long userId) {
+        if (!verificationService.isVerified(userId)) {
+            throw new RuntimeException("请先完成实名认证");
+        }
     }
 
     @PostMapping("/generate")
     public ApiResponse<Map<String, Object>> generate(@RequestHeader("Authorization") String authorization,
             @RequestBody(required = false) Map<String, Object> body) {
         long userId = currentUserId(authorization);
+        checkVerified(userId);
 
         Integer maxUses = null;
         Integer validDays = null;
@@ -47,6 +58,7 @@ public class UserInviteController {
     @GetMapping("/mycode")
     public ApiResponse<Map<String, Object>> myCode(@RequestHeader("Authorization") String authorization) {
         long userId = currentUserId(authorization);
+        checkVerified(userId);
         Map<String, Object> result = service.getMyInviteCode(userId);
         return ApiResponse.ok(result);
     }
@@ -63,6 +75,7 @@ public class UserInviteController {
             @RequestParam(value = "page", defaultValue = "1") Integer page,
             @RequestParam(value = "size", defaultValue = "20") Integer size) {
         long userId = currentUserId(authorization);
+        checkVerified(userId);
 
         // 参数验证
         page = Math.max(page, 1);

@@ -23,6 +23,7 @@ public class EmailWhitelistService {
             "vip.qq.com",
             "163.com",
             "vip.163.com",
+            "yeah.net",
             "sina.com",
             "sina.cn",
             "139.com",
