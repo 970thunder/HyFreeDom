@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.js'
 
 const routes = [
-    { path: '/', redirect: '/user/login' },
+    { path: '/', component: () => import('../views/Landing.vue') },
     // User
     { path: '/user/login', component: () => import('../views/user/Login.vue') },
     { path: '/user/forgot', component: () => import('../views/user/Forgot.vue') },

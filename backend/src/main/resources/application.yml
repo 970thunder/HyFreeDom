@@ -48,3 +48,7 @@ secrets:
 
 github:
   token: ${GITHUB_TOKEN:}
+
+aliyun:
+  api:
+    appcode: ${ALIYUN_API_APPCODE:}

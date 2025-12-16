@@ -55,3 +55,7 @@ secrets:
 app:
   name: "DomainDNS"
   url: "https://your-domain.com"
+
+aliyun:
+  api:
+    appcode: ${ALIYUN_API_APPCODE}
