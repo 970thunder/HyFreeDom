@@ -7,7 +7,7 @@ public class ApiResponse<T> {
 
     public static <T> ApiResponse<T> ok(T data) {
         ApiResponse<T> r = new ApiResponse<>();
-        r.code = 0;
+        r.code = 200;
         r.message = "ok";
         r.data = data;
         return r;

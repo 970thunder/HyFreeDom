@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.domaindns.admin.mapper.FeaturedSiteMapper">
+    <resultMap id="FeaturedSiteMap" type="com.domaindns.admin.model.FeaturedSite">
+        <id property="id" column="id" />
+        <result property="name" column="name" />
+        <result property="url" column="url" />
+        <result property="logoUrl" column="logo_url" />
+        <result property="description" column="description" />
+        <result property="createdAt" column="created_at" />
+        <result property="updatedAt" column="updated_at" />
+    </resultMap>
+
+    <select id="findAll" resultMap="FeaturedSiteMap">
+        SELECT id, name, url, logo_url, description, created_at, updated_at
+        FROM featured_sites
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="findById" resultMap="FeaturedSiteMap">
+        SELECT id, name, url, logo_url, description, created_at, updated_at
+        FROM featured_sites
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.domaindns.admin.model.FeaturedSite" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO featured_sites(name, url, logo_url, description, created_at, updated_at)
+        VALUES(#{name}, #{url}, #{logoUrl}, #{description}, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="com.domaindns.admin.model.FeaturedSite">
+        UPDATE featured_sites
+        SET name = #{name},
+            url = #{url},
+            logo_url = #{logoUrl},
+            description = #{description},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM featured_sites WHERE id = #{id}
+    </delete>
+</mapper>

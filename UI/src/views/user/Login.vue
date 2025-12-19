@@ -50,6 +50,18 @@
 			<button class="button-submit" type="submit" :disabled="isLoading">
 				{{ isLoading ? '登录中...' : '登录' }}
 			</button>
+
+			<div class="agreement-box">
+				<div class="agreement-checkbox">
+					<input type="checkbox" id="agreement" v-model="isAgreed">
+					<label for="agreement">我已阅读并同意
+						<router-link to="/legal/user-agreement" target="_blank" class="link">《用户协议》</router-link>和
+						<router-link to="/legal/privacy-policy" target="_blank" class="link">《隐私条款》</router-link>
+					</label>
+				</div>
+			</div>
+
+			<!-- 
 			<div class="flex-row">
 				<button class="btn github" type="button">
 					<svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
@@ -60,6 +72,7 @@
 					GitHub
 				</button>
 			</div>
+			-->
 		</form>
 
 	</div>
@@ -79,8 +92,14 @@ const password = ref('')
 const remember = ref(false)
 const isLoading = ref(false)
 const errorMessage = ref('')
+const isAgreed = ref(false)
 
 const onSubmit = async () => {
+	if (!isAgreed.value) {
+		ElMessage.warning('请阅读并同意用户协议和隐私条款')
+		return
+	}
+
 	if (!account.value.trim() || !password.value.trim()) {
 		errorMessage.value = '请输入用户名和密码'
 		return
@@ -310,5 +329,44 @@ onMounted(() => {
 		border-radius: 0;
 		padding: 20px;
 	}
+}
+
+.agreement-box {
+	margin-top: 15px;
+	width: 100%;
+}
+
+.agreement-checkbox {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	font-size: 13px;
+	color: #64748b;
+}
+
+.agreement-checkbox input[type="checkbox"] {
+	width: 16px;
+	height: 16px;
+	cursor: pointer;
+	accent-color: #2d79f3;
+}
+
+.agreement-checkbox label {
+	cursor: pointer;
+	user-select: none;
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.agreement-checkbox .link {
+	color: #2d79f3;
+	text-decoration: none;
+	margin: 0 2px;
+}
+
+.agreement-checkbox .link:hover {
+	text-decoration: underline;
 }
 </style>

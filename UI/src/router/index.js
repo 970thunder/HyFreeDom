@@ -19,6 +19,9 @@ const routes = [
             { path: 'github-tasks', component: () => import('../views/user/GithubTasks.vue') },
         ]
     },
+    // 法律条款页面
+    { path: '/legal/user-agreement', component: () => import('../views/legal/UserAgreement.vue') },
+    { path: '/legal/privacy-policy', component: () => import('../views/legal/PrivacyPolicy.vue') },
     // Admin login (separate)
     { path: '/admin/login', component: () => import('../views/admin/AdminLogin.vue') },
     // Admin
@@ -32,6 +35,7 @@ const routes = [
             { path: 'invites', component: () => import('../views/admin/Invites.vue') },
             { path: 'cards', component: () => import('../views/admin/Cards.vue') },
             { path: 'points-logs', component: () => import('../views/admin/PointsLogs.vue') },
+            { path: 'featured-sites', component: () => import('../views/admin/FeaturedSites.vue') },
             { path: 'settings', component: () => import('../views/admin/Settings.vue') },
             { path: 'github-tasks', component: () => import('../views/admin/GithubTasks.vue') },
         ]

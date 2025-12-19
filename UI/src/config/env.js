@@ -68,7 +68,7 @@ export const ROUTE_CONFIG = {
 
 // 错误码配置
 export const ERROR_CODES = {
-    SUCCESS: 0,
+    SUCCESS: 200,
     PARAM_ERROR: 40001,
     AUTH_ERROR: 40101,
     PERMISSION_ERROR: 40301,

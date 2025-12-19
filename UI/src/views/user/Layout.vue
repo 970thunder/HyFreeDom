@@ -228,10 +228,13 @@
 
 		<!-- 公告弹窗 -->
 		<AnnouncementModal v-model:visible="showAnnouncementModal" @confirm="handleAnnouncementConfirm" />
+
+		<FeaturedSitesSidebar />
 	</div>
 </template>
 
 <script setup>
+import FeaturedSitesSidebar from '@/components/FeaturedSitesSidebar.vue'
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.js'
