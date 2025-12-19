@@ -382,8 +382,28 @@ const initData = async () => {
 	}
 }
 
+// 页面可见性变化处理
+const handleVisibilityChange = () => {
+	if (document.visibilityState === 'visible') {
+		initData()
+	}
+}
+
+// 监听用户信息变化
+watch(() => authStore.user, (newUser) => {
+	if (newUser) {
+		// 如果用户信息更新（例如实名认证状态变化），重新加载数据
+		initData()
+	}
+}, { deep: true })
+
 onMounted(() => {
 	initData()
+	document.addEventListener('visibilitychange', handleVisibilityChange)
+})
+
+onUnmounted(() => {
+	document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 </script>
 <style scoped>

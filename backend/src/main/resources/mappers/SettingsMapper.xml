@@ -7,10 +7,14 @@
 	</resultMap>
 
 	<select id="findAll" resultMap="SettingsMap">
-		SELECT k, v FROM system_settings
-	</select>
+        SELECT k, v FROM system_settings
+    </select>
 
-	<insert id="upsert" parameterType="com.domaindns.settings.SettingsRow">
+    <select id="getValue" resultType="string">
+        SELECT v FROM system_settings WHERE k = #{k}
+    </select>
+
+    <insert id="upsert" parameterType="com.domaindns.settings.SettingsRow">
 		INSERT INTO system_settings(k, v) VALUES(#{k}, #{v})
 		ON DUPLICATE KEY UPDATE v=VALUES(v)
 	</insert>

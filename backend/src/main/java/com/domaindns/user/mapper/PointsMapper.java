@@ -33,4 +33,13 @@ public interface PointsMapper {
 
         // 统计邀请奖励记录数量
         int countInviteRewards(@Param("userId") Long userId);
+
+        // 管理员查询所有积分流水
+        java.util.List<java.util.Map<String, Object>> listAll(@Param("keyword") String keyword,
+                        @Param("type") String type,
+                        @Param("offset") Integer offset,
+                        @Param("size") Integer size);
+
+        // 管理员统计所有积分流水数量
+        int countAll(@Param("keyword") String keyword, @Param("type") String type);
 }

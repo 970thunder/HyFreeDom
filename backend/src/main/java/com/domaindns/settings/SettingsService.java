@@ -22,6 +22,11 @@ public class SettingsService {
         return m;
     }
 
+    public String get(String key, String defaultValue) {
+        String val = mapper.getValue(key);
+        return val != null ? val : defaultValue;
+    }
+
     public void update(Map<String, String> body) {
         if (body == null)
             return;

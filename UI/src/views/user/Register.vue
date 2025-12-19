@@ -161,8 +161,7 @@
 						<div class="email-category">
 							<h4>国内邮箱服务</h4>
 							<div class="email-list">
-								<span v-for="domain in getEmailDomains().slice(4)" :key="domain"
-									class="email-domain">
+								<span v-for="domain in getEmailDomains().slice(4)" :key="domain" class="email-domain">
 									@{{ domain }}
 								</span>
 							</div>
@@ -171,8 +170,7 @@
 						<div class="email-category">
 							<h4>教育邮箱</h4>
 							<div class="email-list">
-								<span v-for="suffix in getEduSuffixes()" :key="suffix"
-									class="email-domain">
+								<span v-for="suffix in getEduSuffixes()" :key="suffix" class="email-domain">
 									*{{ suffix }}
 								</span>
 							</div>
@@ -222,7 +220,7 @@ const emailWhitelist = ref(null)
 const staticEmailWhitelist = {
 	allowedDomains: [
 		'gmail.com',
-		'googlemail.com', 
+		'googlemail.com',
 		'outlook.com',
 		'icloud.com',
 		'qq.com',
@@ -412,25 +410,25 @@ const validateEmail = async () => {
 		emailError.value = ''
 		return
 	}
-	
+
 	// 获取邮箱白名单数据
 	await loadEmailWhitelist()
-	
+
 	// 简单的客户端验证
 	const email = formData.value.email.toLowerCase()
 	const allowedDomains = getEmailDomains()
 	const allowedEduSuffixes = getEduSuffixes()
-	
+
 	const domain = email.split('@')[1]
 	if (!domain) {
 		emailError.value = '邮箱格式不正确'
 		return
 	}
-	
+
 	// 检查是否在允许的域名列表中
-	const isAllowed = allowedDomains.includes(domain) || 
-					  allowedEduSuffixes.some(suffix => domain.endsWith(suffix))
-	
+	const isAllowed = allowedDomains.includes(domain) ||
+		allowedEduSuffixes.some(suffix => domain.endsWith(suffix))
+
 	if (!isAllowed) {
 		emailError.value = '该邮箱域名不在允许列表中，请使用主流邮箱服务'
 	}
@@ -439,7 +437,7 @@ const validateEmail = async () => {
 // 加载邮箱白名单数据
 const loadEmailWhitelist = async () => {
 	if (emailWhitelist.value) return // 已经加载过了
-	
+
 	try {
 		const response = await fetch('/api/auth/email-whitelist')
 		if (response.ok) {
@@ -558,6 +556,8 @@ const goLogin = () => {
 	align-items: center;
 	padding-left: 10px;
 	transition: 0.2s ease-in-out;
+	background-color: white;
+	gap: 10px;
 }
 
 .inputForm:focus-within {
@@ -565,16 +565,28 @@ const goLogin = () => {
 }
 
 .input {
-	margin-left: 10px;
 	border-radius: 10px;
 	border: none;
-	width: 85%;
+	flex: 1;
 	height: 100%;
 	font-size: 14px;
+	background-color: transparent;
+	padding-right: 10px;
+	color: #151717;
 }
 
 .input:focus {
 	outline: none;
+}
+
+/* 修复浏览器自动填充背景色问题 */
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus,
+.input:-webkit-autofill:active {
+	-webkit-box-shadow: 0 0 0 30px white inset !important;
+	-webkit-text-fill-color: #151717 !important;
+	transition: background-color 5000s ease-in-out 0s;
 }
 
 .flex-row {

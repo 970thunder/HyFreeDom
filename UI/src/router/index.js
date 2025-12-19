@@ -31,6 +31,7 @@ const routes = [
             { path: 'users', component: () => import('../views/admin/Users.vue') },
             { path: 'invites', component: () => import('../views/admin/Invites.vue') },
             { path: 'cards', component: () => import('../views/admin/Cards.vue') },
+            { path: 'points-logs', component: () => import('../views/admin/PointsLogs.vue') },
             { path: 'settings', component: () => import('../views/admin/Settings.vue') },
             { path: 'github-tasks', component: () => import('../views/admin/GithubTasks.vue') },
         ]

@@ -2,9 +2,13 @@ package com.domaindns.auth.service;
 
 import com.domaindns.auth.dto.AuthDtos.VerificationReq;
 import com.domaindns.auth.dto.AuthDtos.VerificationStatusResp;
+import com.domaindns.auth.entity.User;
 import com.domaindns.auth.entity.UserProfile;
+import com.domaindns.auth.mapper.UserMapper;
 import com.domaindns.auth.mapper.UserProfileMapper;
 import com.domaindns.common.EncryptionUtil;
+import com.domaindns.settings.SettingsService;
+import com.domaindns.user.mapper.PointsMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +30,9 @@ import java.util.concurrent.TimeUnit;
 public class VerificationService {
 
     private final UserProfileMapper userProfileMapper;
+    private final UserMapper userMapper;
+    private final PointsMapper pointsMapper;
+    private final SettingsService settingsService;
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
@@ -33,8 +40,12 @@ public class VerificationService {
     @Value("${aliyun.api.appcode:}")
     private String appCode;
 
-    public VerificationService(UserProfileMapper userProfileMapper) {
+    public VerificationService(UserProfileMapper userProfileMapper, UserMapper userMapper, PointsMapper pointsMapper,
+            SettingsService settingsService) {
         this.userProfileMapper = userProfileMapper;
+        this.userMapper = userMapper;
+        this.pointsMapper = pointsMapper;
+        this.settingsService = settingsService;
     }
 
     @Transactional
@@ -100,6 +111,22 @@ public class VerificationService {
                 existing.setVerifiedAt(LocalDateTime.now());
                 userProfileMapper.update(existing);
             }
+
+            // 4. Award Points (from settings, default 15)
+            String rewardStr = settingsService.get("verification_reward_points", "15");
+            int rewardPoints = 15;
+            try {
+                rewardPoints = Integer.parseInt(rewardStr);
+            } catch (NumberFormatException e) {
+                // ignore, use default
+            }
+
+            if (rewardPoints > 0) {
+                pointsMapper.adjust(userId, rewardPoints);
+                User user = userMapper.findById(userId);
+                pointsMapper.insertTxn(userId, rewardPoints, user.getPoints(), "VERIFICATION_REWARD", "实名认证奖励", null);
+            }
+
         } catch (Exception e) {
             throw new RuntimeException("系统错误：加密失败", e);
         }

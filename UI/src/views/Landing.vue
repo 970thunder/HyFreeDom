@@ -16,11 +16,17 @@
 		<!-- 主要内容区 -->
 		<main class="hero-section">
 			<!-- 背景动画 -->
-			<div class="bg-animation">
-				<div class="blob blob-1"></div>
-				<div class="blob blob-2"></div>
-				<div class="blob blob-3"></div>
+			<div class="bg-animation" ref="bgRef">
+				<div class="grid-overlay"></div>
+				<div class="blob blob-1" :style="{ translate: `${mouseX * -0.02}px ${mouseY * -0.02}px` }"></div>
+				<div class="blob blob-2" :style="{ translate: `${mouseX * 0.03}px ${mouseY * 0.03}px` }"></div>
+				<div class="blob blob-3" :style="{ translate: `${mouseX * -0.04}px ${mouseY * -0.04}px` }"></div>
+				<div class="blob blob-4" :style="{ translate: `${mouseX * 0.02}px ${mouseY * 0.05}px` }"></div>
+				<div class="stars"></div>
 			</div>
+
+			<!-- 交互特效画布 -->
+			<canvas ref="canvasRef" class="interaction-canvas"></canvas>
 
 			<div class="content-wrapper">
 				<h1 class="hero-title">
@@ -35,8 +41,8 @@
 				<!-- 搜索框区域 -->
 				<div class="search-container" :class="{ 'has-results': searchResults.length > 0 }">
 					<div class="input-group">
-						<input type="text" v-model="searchPrefix" @keyup.enter="handleSearch" placeholder="输入您想要的前缀 (如: myblog)"
-							class="search-input" :disabled="loading" />
+						<input type="text" v-model="searchPrefix" @keyup.enter="handleSearch"
+							placeholder="输入您想要的前缀 (如: myblog)" class="search-input" :disabled="loading" />
 						<button class="search-btn" @click="handleSearch" :disabled="loading || !searchPrefix">
 							<span v-if="loading" class="loader"></span>
 							<span v-else>查询</span>
@@ -91,6 +97,123 @@ const isScrolled = ref(false)
 const searchPrefix = ref('')
 const loading = ref(false)
 const searchResults = ref([])
+const mouseX = ref(0)
+const mouseY = ref(0)
+const canvasRef = ref(null)
+
+// 粒子系统
+let ctx = null
+let animationFrameId = null
+const particles = []
+const trailParticles = []
+let hue = 0
+
+// 随机数生成
+const random = (min, max) => Math.random() * (max - min) + min
+
+// 创建拖尾粒子
+const createTrail = (x, y) => {
+	trailParticles.push({
+		x,
+		y,
+		size: random(2, 5),
+		color: `hsla(${hue}, 100%, 70%, 0.8)`,
+		life: 1,
+		decay: 0.05
+	})
+}
+
+// 创建点击爆炸粒子
+const createExplosion = (x, y) => {
+	const particleCount = 20
+	for (let i = 0; i < particleCount; i++) {
+		const angle = (Math.PI * 2 / particleCount) * i + random(-0.2, 0.2)
+		const velocity = random(2, 6)
+		particles.push({
+			x,
+			y,
+			vx: Math.cos(angle) * velocity,
+			vy: Math.sin(angle) * velocity,
+			size: random(2, 6),
+			color: `hsla(${hue + random(-30, 30)}, 100%, 70%, 1)`,
+			life: 1,
+			decay: random(0.02, 0.04)
+		})
+	}
+}
+
+// 动画循环
+const animate = () => {
+	if (!ctx) return
+	ctx.clearRect(0, 0, window.innerWidth, window.innerHeight)
+
+	hue += 2 // 颜色轮转
+
+	// 更新和绘制拖尾
+	for (let i = trailParticles.length - 1; i >= 0; i--) {
+		const p = trailParticles[i]
+		p.life -= p.decay
+
+		if (p.life <= 0) {
+			trailParticles.splice(i, 1)
+			continue
+		}
+
+		ctx.beginPath()
+		ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
+		ctx.fillStyle = p.color
+		ctx.globalAlpha = p.life
+		ctx.shadowBlur = 10
+		ctx.shadowColor = p.color
+		ctx.fill()
+	}
+
+	// 更新和绘制爆炸粒子
+	for (let i = particles.length - 1; i >= 0; i--) {
+		const p = particles[i]
+		p.x += p.vx
+		p.y += p.vy
+		p.life -= p.decay
+
+		if (p.life <= 0) {
+			particles.splice(i, 1)
+			continue
+		}
+
+		ctx.beginPath()
+		ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
+		ctx.fillStyle = p.color
+		ctx.globalAlpha = p.life
+		ctx.shadowBlur = 15
+		ctx.shadowColor = p.color
+		ctx.fill()
+	}
+
+	ctx.globalAlpha = 1
+	animationFrameId = requestAnimationFrame(animate)
+}
+
+// 鼠标移动监听
+const handleMouseMove = (e) => {
+	mouseX.value = e.clientX - window.innerWidth / 2
+	mouseY.value = e.clientY - window.innerHeight / 2
+
+	// 添加拖尾
+	createTrail(e.clientX, e.clientY)
+}
+
+// 点击监听
+const handleClick = (e) => {
+	createExplosion(e.clientX, e.clientY)
+}
+
+// 窗口大小调整
+const handleResize = () => {
+	if (canvasRef.value) {
+		canvasRef.value.width = window.innerWidth
+		canvasRef.value.height = window.innerHeight
+	}
+}
 
 // 滚动监听
 const handleScroll = () => {
@@ -99,16 +222,33 @@ const handleScroll = () => {
 
 onMounted(() => {
 	window.addEventListener('scroll', handleScroll)
+	window.addEventListener('mousemove', handleMouseMove)
+	window.addEventListener('click', handleClick)
+	window.addEventListener('resize', handleResize)
+
+	// 初始化 Canvas
+	if (canvasRef.value) {
+		ctx = canvasRef.value.getContext('2d')
+		canvasRef.value.width = window.innerWidth
+		canvasRef.value.height = window.innerHeight
+		animate()
+	}
 })
 
 onUnmounted(() => {
 	window.removeEventListener('scroll', handleScroll)
+	window.removeEventListener('mousemove', handleMouseMove)
+	window.removeEventListener('click', handleClick)
+	window.removeEventListener('resize', handleResize)
+	if (animationFrameId) {
+		cancelAnimationFrame(animationFrameId)
+	}
 })
 
 // 搜索功能
 const handleSearch = async () => {
 	if (!searchPrefix.value) return
-	
+
 	// 简单校验
 	if (!/^[a-zA-Z0-9-]+$/.test(searchPrefix.value)) {
 		ElMessage.warning('前缀只能包含字母、数字和连字符')
@@ -122,7 +262,7 @@ const handleSearch = async () => {
 		const response = await apiGet('/api/domains/search', {
 			params: { prefix: searchPrefix.value }
 		})
-		
+
 		if (response.data) {
 			searchResults.value = response.data
 			if (searchResults.value.length === 0) {
@@ -239,47 +379,131 @@ const goToLogin = () => {
 	bottom: 0;
 	overflow: hidden;
 	z-index: 0;
+	background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+}
+
+.interaction-canvas {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	z-index: 1;
+}
+
+.grid-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-image:
+		linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+	background-size: 50px 50px;
+	perspective: 500px;
+	transform-origin: center;
+	opacity: 0.5;
+	mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+}
+
+.stars {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-image:
+		radial-gradient(1px 1px at 10% 10%, white 100%, transparent),
+		radial-gradient(1px 1px at 20% 40%, white 100%, transparent),
+		radial-gradient(2px 2px at 30% 70%, white 100%, transparent),
+		radial-gradient(1px 1px at 40% 20%, white 100%, transparent),
+		radial-gradient(1px 1px at 50% 50%, white 100%, transparent),
+		radial-gradient(2px 2px at 60% 80%, white 100%, transparent),
+		radial-gradient(1px 1px at 70% 30%, white 100%, transparent),
+		radial-gradient(1px 1px at 80% 60%, white 100%, transparent),
+		radial-gradient(2px 2px at 90% 10%, white 100%, transparent);
+	background-size: 200px 200px;
+	opacity: 0.3;
+	animation: twinkle 5s infinite;
 }
 
 .blob {
 	position: absolute;
 	border-radius: 50%;
-	filter: blur(80px);
-	opacity: 0.4;
-	animation: float 10s infinite ease-in-out;
+	filter: blur(60px);
+	opacity: 0.5;
+	mix-blend-mode: screen;
+	transition: transform 0.1s ease-out;
 }
 
 .blob-1 {
-	width: 400px;
-	height: 400px;
-	background: #6366f1;
-	top: -100px;
-	left: -100px;
-	animation-delay: 0s;
+	width: 500px;
+	height: 500px;
+	background: radial-gradient(circle, #6366f1 0%, transparent 70%);
+	top: -150px;
+	left: -150px;
+	animation: float 15s infinite ease-in-out;
 }
 
 .blob-2 {
-	width: 300px;
-	height: 300px;
-	background: #ec4899;
-	bottom: 10%;
-	right: -50px;
-	animation-delay: -2s;
+	width: 400px;
+	height: 400px;
+	background: radial-gradient(circle, #ec4899 0%, transparent 70%);
+	bottom: -50px;
+	right: -100px;
+	animation: float 12s infinite ease-in-out reverse;
 }
 
 .blob-3 {
+	width: 450px;
+	height: 450px;
+	background: radial-gradient(circle, #06b6d4 0%, transparent 70%);
+	top: 30%;
+	left: 20%;
+	animation: float 18s infinite ease-in-out 2s;
+}
+
+.blob-4 {
 	width: 350px;
 	height: 350px;
-	background: #06b6d4;
-	top: 40%;
+	background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
+	bottom: 20%;
 	left: 30%;
-	animation-delay: -4s;
+	animation: float 14s infinite ease-in-out 5s;
 }
 
 @keyframes float {
-	0%, 100% { transform: translate(0, 0); }
-	33% { transform: translate(30px, -50px); }
-	66% { transform: translate(-20px, 20px); }
+
+	0%,
+	100% {
+		transform: translate(0, 0) rotate(0deg);
+	}
+
+	25% {
+		transform: translate(20px, 30px) rotate(5deg);
+	}
+
+	50% {
+		transform: translate(-20px, 10px) rotate(-5deg);
+	}
+
+	75% {
+		transform: translate(10px, -20px) rotate(2deg);
+	}
+}
+
+@keyframes twinkle {
+
+	0%,
+	100% {
+		opacity: 0.3;
+	}
+
+	50% {
+		opacity: 0.5;
+	}
 }
 
 .content-wrapper {
@@ -389,8 +613,15 @@ const goToLogin = () => {
 }
 
 @keyframes slideUp {
-	from { opacity: 0; transform: translateY(20px); }
-	to { opacity: 1; transform: translateY(0); }
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 .results-grid {
@@ -488,8 +719,13 @@ const goToLogin = () => {
 }
 
 @keyframes rotation {
-	0% { transform: rotate(0deg); }
-	100% { transform: rotate(360deg); }
+	0% {
+		transform: rotate(0deg);
+	}
+
+	100% {
+		transform: rotate(360deg);
+	}
 }
 
 .footer {
@@ -508,21 +744,21 @@ const goToLogin = () => {
 	.hero-title {
 		font-size: 40px;
 	}
-	
+
 	.hero-subtitle {
 		font-size: 16px;
 	}
-	
+
 	.navbar {
 		padding: 15px 20px;
 	}
-	
+
 	.result-card {
 		flex-direction: column;
 		gap: 16px;
 		align-items: flex-start;
 	}
-	
+
 	.action-area {
 		width: 100%;
 		display: flex;

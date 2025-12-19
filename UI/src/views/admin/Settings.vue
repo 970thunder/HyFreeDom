@@ -31,6 +31,11 @@
 							<label class="label">单用户域名上限</label>
 							<input class="input" v-model.number="settings.max_domains_per_user" type="number" min="1" />
 						</div>
+						<div class="input-row">
+							<label class="label">实名赠送积分</label>
+							<input class="input" v-model.number="settings.verification_reward_points" type="number"
+								min="0" />
+						</div>
 					</div>
 					<div class="row">
 						<button class="btn primary" @click="saveSettings" :disabled="isLoading">
@@ -232,6 +237,7 @@ const settings = reactive({
 	invitee_points: 3,
 	domain_cost_points: 10,
 	max_domains_per_user: 5,
+	verification_reward_points: 15,
 	default_ttl: 120,
 	sync_cron_expression: '0 */5 * * * *'
 })
@@ -243,6 +249,7 @@ const defaultSettings = {
 	invitee_points: 3,
 	domain_cost_points: 10,
 	max_domains_per_user: 5,
+	verification_reward_points: 15,
 	default_ttl: 120,
 	sync_cron_expression: '0 */5 * * * *'
 }
@@ -305,6 +312,7 @@ const loadSettings = async () => {
 			invitee_points: parseInt(data.invitee_points) || 3,
 			domain_cost_points: parseInt(data.domain_cost_points) || 10,
 			max_domains_per_user: parseInt(data.max_domains_per_user) || 5,
+			verification_reward_points: parseInt(data.verification_reward_points) || 15,
 			default_ttl: parseInt(data.default_ttl) || 120,
 			sync_cron_expression: data.sync_cron_expression || '0 */5 * * * *'
 		})
@@ -477,6 +485,10 @@ const saveSettings = async () => {
 			ElMessage.error('单用户域名上限必须大于 0')
 			return
 		}
+		if (settings.verification_reward_points < 0) {
+			ElMessage.error('实名赠送积分不能小于 0')
+			return
+		}
 		if (settings.default_ttl < 1 || settings.default_ttl > 86400) {
 			ElMessage.error('默认 TTL 必须在 1-86400 之间')
 			return
@@ -489,6 +501,7 @@ const saveSettings = async () => {
 			invitee_points: settings.invitee_points.toString(),
 			domain_cost_points: settings.domain_cost_points.toString(),
 			max_domains_per_user: settings.max_domains_per_user.toString(),
+			verification_reward_points: settings.verification_reward_points.toString(),
 			default_ttl: settings.default_ttl.toString(),
 			sync_cron_expression: settings.sync_cron_expression
 		}

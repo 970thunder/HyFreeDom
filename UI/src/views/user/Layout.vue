@@ -232,7 +232,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.js'
 import { apiGet } from '@/utils/api.js'
@@ -369,6 +369,13 @@ const logout = async () => {
 		}
 	}
 }
+
+// 监听用户信息变化
+watch(() => authStore.user, (newUser) => {
+	if (newUser) {
+		userInfo.value = { ...userInfo.value, ...newUser }
+	}
+}, { deep: true })
 
 onMounted(() => {
 	checkMobile()

@@ -171,18 +171,32 @@ onMounted(() => {
 	align-items: center;
 	padding-left: 10px;
 	transition: 0.2s ease-in-out;
+	background-color: white;
+	gap: 10px;
 }
 
 .input {
-	margin-left: 10px;
 	border-radius: 10px;
 	border: none;
-	width: 85%;
+	flex: 1;
 	height: 100%;
+	background-color: transparent;
+	padding-right: 10px;
+	color: #151717;
 }
 
 .input:focus {
 	outline: none;
+}
+
+/* 修复浏览器自动填充背景色问题 */
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus,
+.input:-webkit-autofill:active {
+	-webkit-box-shadow: 0 0 0 30px white inset !important;
+	-webkit-text-fill-color: #151717 !important;
+	transition: background-color 5000s ease-in-out 0s;
 }
 
 .inputForm:focus-within {

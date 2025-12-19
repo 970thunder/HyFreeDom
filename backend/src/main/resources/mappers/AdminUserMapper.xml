@@ -25,12 +25,13 @@
 				<if test="status!=null"> AND </if>
 				u.role=#{role}
 			</if>
-			<if test="isVerified!=null">
-			    AND (
-			        (#{isVerified} = true AND up.is_verified = 1)
-			        OR
-			        (#{isVerified} = false AND (up.is_verified IS NULL OR up.is_verified = 0))
-			    )
+			<if test="isVerified != null">
+				<if test="isVerified == true">
+					AND up.is_verified = 1
+				</if>
+				<if test="isVerified == false">
+					AND (up.is_verified IS NULL OR up.is_verified = 0)
+				</if>
 			</if>
 		</where>
 		ORDER BY u.id DESC
@@ -46,12 +47,13 @@
 				<if test="status!=null"> AND </if>
 				u.role=#{role}
 			</if>
-			<if test="isVerified!=null">
-			    AND (
-			        (#{isVerified} = true AND up.is_verified = 1)
-			        OR
-			        (#{isVerified} = false AND (up.is_verified IS NULL OR up.is_verified = 0))
-			    )
+			<if test="isVerified != null">
+				<if test="isVerified == true">
+					AND up.is_verified = 1
+				</if>
+				<if test="isVerified == false">
+					AND (up.is_verified IS NULL OR up.is_verified = 0)
+				</if>
 			</if>
 		</where>
 	</select>

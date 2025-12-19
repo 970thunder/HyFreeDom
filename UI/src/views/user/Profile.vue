@@ -23,7 +23,7 @@
                     <div class="info-item">
                         <span class="label">状态：</span>
                         <span class="badge" :class="getStatusClass(userInfo.status)">{{ getStatusText(userInfo.status)
-                        }}</span>
+                            }}</span>
                     </div>
                     <div class="info-item">
                         <span class="label">实名认证：</span>
@@ -194,6 +194,10 @@
 
     <!-- 实名认证对话框 -->
     <el-dialog v-model="verificationDialogVisible" title="实名认证" :width="dialogWidth" :close-on-click-modal="false">
+        <p v-if="rewardPoints > 0"
+            style="color: #f59e0b; font-size: 12px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; background: #fffbeb; padding: 8px; border-radius: 4px;">
+            🎁 实名完成回馈赠送 {{ rewardPoints }} 积分
+        </p>
         <el-form :model="verificationForm" :rules="verificationRules" ref="verificationFormRef"
             :label-width="labelWidth">
             <el-form-item label="真实姓名" prop="realName">
@@ -249,6 +253,7 @@ const verificationInfo = ref({
     realName: '',
     idCard: ''
 })
+const rewardPoints = ref(15)
 const verificationDialogVisible = ref(false)
 const isVerifying = ref(false)
 const verificationForm = ref({
@@ -347,11 +352,24 @@ const refreshUserInfo = () => {
     loadVerificationStatus()
 }
 
+const loadRewardConfig = async () => {
+    try {
+        const res = await apiGet('/api/user/verification/reward-config')
+        if (res.code === 0) {
+            rewardPoints.value = res.data.points
+        }
+    } catch (error) {
+        console.error('获取实名奖励配置失败:', error)
+    }
+}
+
 // 显示认证对话框
 const showVerificationDialog = () => {
     verificationDialogVisible.value = true
     verificationForm.value.realName = ''
     verificationForm.value.idCard = ''
+    // 如果没有获取过（还是默认15），尝试获取一次
+    loadRewardConfig()
 }
 
 // 格式化身份证号显示
@@ -400,8 +418,20 @@ const handleVerification = async () => {
                 isVerifying.value = true
                 try {
                     await apiPost('/api/user/verification', verificationForm.value, { token: authStore.token })
-                    ElMessage.success('实名认证成功')
+
                     verificationDialogVisible.value = false
+
+                    ElMessageBox.alert(
+                        `<div style="text-align: center;"><p style="font-size: 16px; margin-bottom: 10px;">恭喜您实名认证成功！</p><p style="color: #f59e0b; font-weight: bold; font-size: 18px;">🎁 已赠送 ${rewardPoints.value} 积分</p></div>`,
+                        '认证成功',
+                        {
+                            confirmButtonText: '开心收下',
+                            dangerouslyUseHTMLString: true,
+                            center: true,
+                            type: 'success'
+                        }
+                    )
+
                     loadVerificationStatus()
                     // 刷新页面状态，可能影响导航栏等
                     authStore.fetchUserInfo()
@@ -653,6 +683,7 @@ const initData = async () => {
     try {
         await loadUserInfo()
         await loadVerificationStatus()
+        await loadRewardConfig()
     } catch (error) {
         console.error('初始化数据失败:', error)
     } finally {
