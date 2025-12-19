@@ -30,14 +30,13 @@
           </div>
 
           <div class="sidebar-footer">
-            <div class="marquee-container">
-              <div class="marquee-content">
-                如果您使用本站提供的域名，想分享您的站点，可以
-                <el-tooltip effect="dark" content="QQ：1010411661，微信：abc1010411661" placement="top">
-                  <span class="contact-link">联系站长</span>
-                </el-tooltip>
-                添加到此列表进行展示
-              </div>
+            <div class="footer-content">
+              如果您使用本站提供的域名，想分享您的站点，可以
+              <el-tooltip effect="dark" content="QQ：1010411661，微信：abc1010411661" placement="top" :z-index="9999999"
+                :teleported="true">
+                <span class="contact-link">联系站长</span>
+              </el-tooltip>
+              添加到此列表进行展示
             </div>
           </div>
         </div>
@@ -81,7 +80,7 @@ onMounted(() => {
   transform: translateY(-50%);
   z-index: 999999;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   transition: all 0.3s ease;
 }
 
@@ -120,6 +119,13 @@ onMounted(() => {
   flex-direction: column;
   overflow: hidden;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  width: 300px;
 }
 
 .is-expanded .sidebar-content {
@@ -200,18 +206,14 @@ onMounted(() => {
   font-size: 12px;
   color: #555;
   border-top: 1px solid rgba(255, 255, 255, 0.2);
+  /* 确保固定在底部，虽然flex布局已经保证了这一点，但这里可以增加一些样式 */
+  text-align: center;
+  line-height: 1.5;
 }
 
-.marquee-container {
-  overflow: hidden;
-  white-space: nowrap;
-  width: 100%;
-}
-
-.marquee-content {
-  display: inline-block;
-  animation: marquee 15s linear infinite;
-  padding-left: 100%;
+.footer-content {
+  white-space: normal;
+  word-break: break-all;
 }
 
 .contact-link {
@@ -219,16 +221,8 @@ onMounted(() => {
   font-weight: bold;
   cursor: pointer;
   text-decoration: underline;
-}
-
-@keyframes marquee {
-  0% {
-    transform: translateX(0);
-  }
-
-  100% {
-    transform: translateX(-100%);
-  }
+  display: inline-block;
+  /* 增加可点击区域稳定性 */
 }
 
 .sites-list::-webkit-scrollbar {

@@ -23,7 +23,7 @@
                     <div class="info-item">
                         <span class="label">状态：</span>
                         <span class="badge" :class="getStatusClass(userInfo.status)">{{ getStatusText(userInfo.status)
-                            }}</span>
+                        }}</span>
                     </div>
                     <div class="info-item">
                         <span class="label">实名认证：</span>
