@@ -717,13 +717,6 @@ watch(() => formData.value.prefix, () => {
 	checkAvailability()
 })
 
-// 组件销毁前清理未完成的专属域名申请
-onUnmounted(() => {
-	if (createdTxtDomainId.value) {
-		cleanupTxtRecord()
-	}
-})
-
 // 初始化数据
 const initData = async () => {
 	isLoading.value = true
@@ -750,9 +743,23 @@ const initData = async () => {
 	}
 }
 
+// 页面可见性变化处理
+const handleVisibilityChange = () => {
+	if (document.visibilityState === 'visible') {
+		initData()
+	}
+}
+
 onMounted(() => {
 	initData()
 	document.addEventListener('visibilitychange', handleVisibilityChange)
+})
+
+onUnmounted(() => {
+	document.removeEventListener('visibilitychange', handleVisibilityChange)
+	if (createdTxtDomainId.value) {
+		cleanupTxtRecord()
+	}
 })
 </script>
 <style scoped>
