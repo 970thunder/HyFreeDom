@@ -424,3 +424,7 @@ docker-compose up -d
 ---
 
 **注意**: 请在生产环境中修改所有默认密码和密钥，并确保数据库和 Redis 的安全配置。
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=970thunder/HyFreeDom&type=date&legend=top-left)](https://www.star-history.com/#970thunder/HyFreeDom&type=date&legend=top-left)
