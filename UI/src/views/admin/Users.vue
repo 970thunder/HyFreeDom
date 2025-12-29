@@ -647,7 +647,7 @@ const handleDeleteUser = async () => {
 			confirmDnsRelease: deleteForm.value.confirmDnsRelease
 		}, { token: authStore.adminToken })
 
-		if (response.code === 0) {
+		if (response.code === 200) {
 			// 显示详细的注销结果
 			const releasedDomains = response.data.releasedDomains || 0
 			const failedDomains = response.data.failedDomains || 0

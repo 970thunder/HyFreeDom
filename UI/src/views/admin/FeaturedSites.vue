@@ -108,7 +108,7 @@ const fetchSites = async () => {
       token: authStore.adminToken
     })
     // 兼容空数组情况
-    if (result.code === 0 || (result.data && Array.isArray(result.data))) {
+    if (result.code === 200 || (result.data && Array.isArray(result.data))) {
       sites.value = result.data || []
     } else {
       ElMessage.error(result.message || '获取列表失败')
@@ -155,7 +155,7 @@ const deleteSite = (row) => {
       const result = await apiDelete(`/api/admin/featured-sites/${row.id}`, {
         token: authStore.adminToken
       })
-      if (result.code === 0) {
+      if (result.code === 200) {
         ElMessage.success('删除成功')
         fetchSites()
       } else {

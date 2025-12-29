@@ -246,7 +246,7 @@ const saveRecord = async () => {
 			remark: editForm.value.remark
 		}, { token: authStore.token })
 
-		if (response.code === 0) {
+		if (response.code === 200) {
 			ElMessage.success('记录保存成功')
 			// 更新本地数据
 			const domain = domains.value.find(d => d.id === editingDomain.value.id)
@@ -284,7 +284,7 @@ const releaseDomain = async (domain) => {
 		isDeleting.value = true
 		const response = await apiDelete(`/api/user/domains/${domain.id}`, { token: authStore.token })
 
-		if (response.code === 0) {
+		if (response.code === 200) {
 			ElMessage.success('域名释放成功')
 			// 重新加载列表
 			loadDomains(currentPage.value)

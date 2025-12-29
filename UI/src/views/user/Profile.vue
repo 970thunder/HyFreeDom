@@ -23,7 +23,7 @@
                     <div class="info-item">
                         <span class="label">状态：</span>
                         <span class="badge" :class="getStatusClass(userInfo.status)">{{ getStatusText(userInfo.status)
-                        }}</span>
+                            }}</span>
                     </div>
                     <div class="info-item">
                         <span class="label">实名认证：</span>
@@ -355,7 +355,7 @@ const refreshUserInfo = () => {
 const loadRewardConfig = async () => {
     try {
         const res = await apiGet('/api/user/verification/reward-config')
-        if (res.code === 0) {
+        if (res.code === 200) {
             rewardPoints.value = res.data.points
         }
     } catch (error) {
@@ -591,7 +591,7 @@ const handleDeleteAccount = async () => {
             confirmPointsLoss: deleteForm.value.confirmPointsLoss
         }, { token: authStore.token })
 
-        if (response.code === 0) {
+        if (response.code === 200) {
             ElMessage.success('账号注销成功')
             deleteAccountDialogVisible.value = false
 
@@ -626,7 +626,7 @@ const sendResetCode = async () => {
             email: resetForm.value.email
         })
 
-        if (response.code === 0) {
+        if (response.code === 200) {
             ElMessage.success('验证码已发送到您的邮箱')
             // 开始60秒倒计时
             resetCountdown.value = 60
@@ -660,7 +660,7 @@ const handleResetPassword = async () => {
             newPassword: resetForm.value.newPassword
         })
 
-        if (response.code === 0) {
+        if (response.code === 200) {
             ElMessage.success('密码重置成功，请重新登录')
             resetPasswordDialogVisible.value = false
             // 跳转到登录页

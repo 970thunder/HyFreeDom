@@ -19,6 +19,13 @@
 				</div>
 			</div>
 
+			<!-- 未实名提示 -->
+			<div class="alert warning" v-if="!isVerified" style="margin: 0 20px 20px 20px;">
+				<i class="icon">⚠️</i>
+				<span>您尚未完成实名认证，仅可查看域名申请流程，无法提交申请。请前往 <router-link to="/user/profile"
+						style="color: inherit; text-decoration: underline;">个人中心</router-link> 完成认证。</span>
+			</div>
+
 			<!-- 普通域名申请表单 -->
 			<div class="form" v-if="activeTab === 'standard'">
 				<!-- 主域名和子域名前缀在同一行 -->
@@ -173,8 +180,9 @@
 					</div>
 
 					<div class="form-actions">
-						<button class="btn primary" @click="verifyAndNext" :disabled="!canVerify || isSubmitting">
-							{{ isSubmitting ? '提交中...' : '提交TXT记录并下一步' }}
+						<button class="btn primary" @click="verifyAndNext"
+							:disabled="!canVerify || isSubmitting || !isVerified">
+							{{ !isVerified ? '请先完成实名认证' : (isSubmitting ? '提交中...' : '提交TXT记录并下一步') }}
 						</button>
 					</div>
 				</div>
@@ -214,8 +222,8 @@
 					<div class="form-actions">
 						<button class="btn outline" @click="handlePreviousStep">上一步</button>
 						<button class="btn primary" @click="submitExclusive"
-							:disabled="!canSubmitExclusive || isSubmitting">
-							{{ isSubmitting ? '提交中...' : '确认开通（再扣除 20 积分）' }}
+							:disabled="!canSubmitExclusive || isSubmitting || !isVerified">
+							{{ !isVerified ? '请先完成实名认证' : (isSubmitting ? '提交中...' : '确认开通（再扣除 20 积分）') }}
 						</button>
 					</div>
 				</div>
@@ -402,6 +410,12 @@ const verifyAndNext = async () => {
 		return
 	}
 
+	if (!isVerified.value) {
+		ElMessage.warning('请先完成实名认证')
+		router.push('/user/profile')
+		return
+	}
+
 	try {
 		await ElMessageBox.confirm(
 			'第一步将扣除 10 积分用于创建校验记录，后续第二步将扣除 20 积分。如果中途撤销 TXT 记录，仅退还一半积分（5 积分）。请确认是否继续？',
@@ -424,7 +438,7 @@ const verifyAndNext = async () => {
 			remark: `专属域名验证 (申请: ${exclusiveData.value.prefix})`
 		}, { token: authStore.token })
 
-		if (response.code === 0) {
+		if (response.code === 200) {
 			// 保存创建的记录ID，以便后续清理
 			if (response.data && response.data.id) {
 				createdTxtDomainId.value = response.data.id
@@ -468,7 +482,7 @@ const submitExclusive = async () => {
 			remark: `专属域名托管 (授权TXT: ${exclusiveData.value.txtValue})`
 		}, { token: authStore.token })
 
-		if (response.code === 0) {
+		if (response.code === 200) {
 			ElMessage.success('专属域名开通成功')
 			createdTxtDomainId.value = null // 成功提交，清除ID避免被清理
 			switchTab('standard') // 重置并返回
@@ -681,7 +695,7 @@ const submitApplication = async () => {
 			remark: formData.value.remark.trim()
 		}, { token: authStore.token })
 
-		if (response.code === 0) {
+		if (response.code === 200) {
 			ElMessage.success('域名申请成功')
 			// 清空表单
 			formData.value = {
@@ -1307,6 +1321,12 @@ onUnmounted(() => {
 	background-color: #ecfdf5;
 	color: #047857;
 	border: 1px solid #d1fae5;
+}
+
+.alert.warning {
+	background-color: #fffbeb;
+	color: #b45309;
+	border: 1px solid #fcd34d;
 }
 
 .icon {

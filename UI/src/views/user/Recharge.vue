@@ -69,7 +69,7 @@ const redeemCard = async () => {
 			token: authStore.token
 		})
 
-		if (response.code === 0) {
+		if (response.code === 200) {
 			ElMessage.success(`兑换成功！获得 ${response.data.points} 积分`)
 			cardCode.value = ''
 			// 刷新用户积分信息

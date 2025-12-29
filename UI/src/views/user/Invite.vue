@@ -179,7 +179,7 @@ const generateInviteCode = async () => {
 			validDays: 30
 		}, { token: authStore.token })
 
-		if (response.code === 0) {
+		if (response.code === 200) {
 			ElMessage.success('邀请码生成成功')
 			// 重新加载邀请码信息
 			await loadInviteCode()
@@ -271,9 +271,9 @@ const handleBindInvite = async () => {
 	binding.value = true
 	try {
 		const resp = await apiPost('/api/user/invite/bind', { inviteCode: bindCode.value.trim() }, { token: authStore.token })
-		if (resp.code === 0) {
-			ElMessage.success('绑定成功，积分已发放')
-			bindCode.value = ''
+    if (resp.code === 200) {
+      ElMessage.success('绑定成功，积分已发放')
+      bindCode.value = ''
 			await loadMyInviter()
 		} else {
 			ElMessage.error(resp.message || '绑定失败')

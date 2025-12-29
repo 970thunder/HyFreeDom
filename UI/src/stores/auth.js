@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import { STORAGE_CONFIG } from '@/config/env.js'
-import { apiPost } from '@/utils/api.js'
+import { STORAGE_CONFIG, ERROR_CODES } from '@/config/env.js'
+import { apiPost, apiGet } from '@/utils/api.js'
 
 export const useAuthStore = defineStore('auth', {
     state: () => ({
@@ -102,7 +102,7 @@ export const useAuthStore = defineStore('auth', {
             try {
                 const response = await apiPost('/api/auth/login', credentials)
 
-                if (response.code === 0) {
+                if (response.code === ERROR_CODES.SUCCESS) {
                     // 调试日志已移除
 
                     this.user = response.data.user
@@ -133,7 +133,7 @@ export const useAuthStore = defineStore('auth', {
             try {
                 const response = await apiPost('/api/auth/admin/login', credentials)
 
-                if (response.code === 0) {
+                if (response.code === ERROR_CODES.SUCCESS) {
                     // 调试日志已移除
 
                     // 分步设置，每步都检查
@@ -173,7 +173,7 @@ export const useAuthStore = defineStore('auth', {
             try {
                 const response = await apiPost('/api/auth/register', userData)
 
-                if (response.code === 0) {
+                if (response.code === ERROR_CODES.SUCCESS) {
                     return { success: true, message: '注册成功' }
                 } else {
                     return { success: false, message: response.message }
@@ -189,7 +189,7 @@ export const useAuthStore = defineStore('auth', {
             try {
                 const response = await apiPost('/api/auth/register/send-code', { email })
 
-                if (response.code === 0) {
+                if (response.code === ERROR_CODES.SUCCESS) {
                     // 立即返回成功，不等待邮件发送完成
                     return { success: true, message: '验证码发送中，请稍后查收邮件' }
                 } else {
@@ -385,27 +385,17 @@ export const useAuthStore = defineStore('auth', {
 
         // 刷新用户信息
         async refreshUserInfo() {
+            if (!this.token) return { success: false, message: '未登录' }
+
             try {
-                if (!this.token) {
-                    return { success: false, message: '未登录' }
-                }
+                const response = await apiGet('/api/auth/me')
 
-                const response = await fetch('/api/user/info', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${this.token}`,
-                        'Content-Type': 'application/json'
-                    }
-                })
-
-                const data = await response.json()
-
-                if (data.code === 0) {
-                    this.user = data.data
+                if (response.code === ERROR_CODES.SUCCESS) {
+                    this.user = response.data.user
                     this.saveToStorage()
-                    return { success: true, data: data.data }
+                    return { success: true, data: response.data }
                 } else {
-                    return { success: false, message: data.message }
+                    return { success: false, message: response.message }
                 }
             } catch (error) {
                 console.error('刷新用户信息失败:', error)

@@ -256,7 +256,7 @@ const handleQuickApply = async () => {
 			remark: '快速申请'
 		}, { token: authStore.token })
 
-		if (response.code === 0) {
+		if (response.code === 200) {
 			ElMessage.success('申请成功')
 			// 清空表单
 			quickApply.value = { zoneId: '', prefix: '', value: '' }
