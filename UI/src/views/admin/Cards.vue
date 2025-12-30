@@ -75,6 +75,7 @@
 							</th>
 							<th>卡密</th>
 							<th>面值</th>
+							<th>使用次数</th>
 							<th>状态</th>
 							<th>生成时间</th>
 							<th>过期时间</th>
@@ -90,6 +91,14 @@
 							</td>
 							<td class="card-code">{{ card.code }}</td>
 							<td>{{ card.points }}</td>
+							<td>
+								<span v-if="card.usageLimit === -1">
+									{{ card.usedCount || 0 }} / ∞
+								</span>
+								<span v-else>
+									{{ card.usedCount || 0 }} / {{ card.usageLimit || 1 }}
+								</span>
+							</td>
 							<td>
 								<span class="badge" :class="getStatusClass(card.status)">
 									{{ getStatusText(card.status) }}
@@ -266,12 +275,14 @@ const exportCsv = () => {
 		}
 
 		// 构建CSV内容
-		const headers = ['卡密', '面值', '状态', '生成时间', '过期时间', '使用者', '使用时间']
+		const headers = ['卡密', '面值', '使用次数', '限制次数', '状态', '生成时间', '过期时间', '使用者', '使用时间']
 		const csvContent = [
 			headers.join(','),
 			...cards.value.map(card => [
 				card.code,
 				card.points,
+				card.usedCount || 0,
+				card.usageLimit === -1 ? '不限' : (card.usageLimit || 1),
 				getStatusText(card.status),
 				formatDate(card.createdAt),
 				formatDate(card.expiredAt) || '永不过期',
