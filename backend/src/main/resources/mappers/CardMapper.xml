@@ -55,7 +55,7 @@
 
 	<update id="markAsUsed">
 		UPDATE cards 
-		SET status = 'USED', used_by = #{usedBy}, used_at = #{usedAt}, used_count = used_count + 1
+		SET status = 'USED', used_by = #{usedBy}, used_at = #{usedAt}
 		WHERE id = #{id} AND status = 'ACTIVE'
 	</update>
 
