@@ -12,6 +12,8 @@ public class Card {
     private String usedByUsername;
     private LocalDateTime usedAt;
     private LocalDateTime createdAt;
+    private Integer usageLimit;
+    private Integer usedCount;
 
     public Long getId() {
         return id;
@@ -83,5 +85,21 @@ public class Card {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Integer getUsageLimit() {
+        return usageLimit;
+    }
+
+    public void setUsageLimit(Integer usageLimit) {
+        this.usageLimit = usageLimit;
+    }
+
+    public Integer getUsedCount() {
+        return usedCount;
+    }
+
+    public void setUsedCount(Integer usedCount) {
+        this.usedCount = usedCount;
     }
 }

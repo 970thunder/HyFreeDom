@@ -102,5 +102,11 @@
             </if>
         </where>
     </select>
+
+    <select id="checkTransactionExists" resultType="int">
+        SELECT COUNT(1) 
+        FROM points_transactions 
+        WHERE user_id = #{userId} AND type = #{type} AND related_id = #{relatedId}
+    </select>
 </mapper>
 

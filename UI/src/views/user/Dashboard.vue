@@ -26,7 +26,18 @@
 
 		<div class="grid cols-2" style="margin-top:16px;">
 			<div class="card">
-				<h3>快速申请</h3>
+				<h3 style="display: flex; align-items: center; gap: 8px;">
+					快速申请
+					<el-tooltip placement="top">
+						<template #content>
+							前往顶部“申请域名”，即可使用30积分换取独属于你的域名<br />
+							可自行挂载Cloudflare或者腾讯云等服务商，无限添加记录
+						</template>
+						<el-icon style="font-size: 16px; color: #9ca3af; cursor: pointer;">
+							<InfoFilled />
+						</el-icon>
+					</el-tooltip>
+				</h3>
 				<div class="form">
 					<div class="row">
 						<select class="select" v-model="quickApply.zoneId" style="max-width: 260px;">
@@ -79,7 +90,8 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.js'
 import { apiGet, apiPost } from '@/utils/api.js'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { InfoFilled } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -171,7 +183,7 @@ const loadAvailableZones = async () => {
 	try {
 		const response = await apiGet('/api/zones', { token: authStore.token })
 		if (response.data) {
-			availableZones.value = response.data.filter(zone => zone.enabled)
+			availableZones.value = response.data.filter(zone => zone.enabled && zone.name !== 'vivo50.today')
 		}
 	} catch (error) {
 		console.error('加载可用域名失败:', error)
@@ -246,8 +258,18 @@ const handleQuickApply = async () => {
 		return
 	}
 
-	isApplying.value = true
 	try {
+		await ElMessageBox.confirm(
+			`确定要消耗 ${domainCost.value} 积分申请域名 ${quickApply.value.prefix}.${selectedZone.value.name} 吗？`,
+			'申请确认',
+			{
+				confirmButtonText: '确定申请',
+				cancelButtonText: '取消',
+				type: 'warning',
+			}
+		)
+
+		isApplying.value = true
 		const response = await apiPost('/api/user/domains/apply', {
 			zoneId: quickApply.value.zoneId,
 			prefix: quickApply.value.prefix.trim(),
@@ -270,8 +292,10 @@ const handleQuickApply = async () => {
 			ElMessage.error(response.message || '申请失败')
 		}
 	} catch (error) {
-		ElMessage.error(error.message || '申请失败')
-		console.error('申请域名失败:', error)
+		if (error !== 'cancel') {
+			ElMessage.error(error.message || '申请失败')
+			console.error('申请域名失败:', error)
+		}
 	} finally {
 		isApplying.value = false
 	}

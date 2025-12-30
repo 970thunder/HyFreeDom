@@ -38,10 +38,10 @@
 					<thead>
 						<tr>
 							<th>ID</th>
-							<th>用户名</th>
-							<th>邮箱</th>
+							<th style="width: 120px;">用户名</th>
+							<th style="width: 160px;">邮箱</th>
 							<th>实名</th>
-							<th>IP地址</th>
+							<th style="width: 130px;">IP地址</th>
 							<th>积分</th>
 							<th>角色</th>
 							<th>状态</th>
@@ -53,17 +53,34 @@
 						<tr v-for="user in users" :key="user.id">
 							<td>{{ user.id }}</td>
 							<td>
-								<a href="javascript:void(0)" @click="viewUserDomains(user)" class="username-link">
-									{{ user.username }}
-								</a>
+								<el-tooltip :content="user.username" placement="top" :show-after="500">
+									<div class="truncate-text" style="max-width: 110px;">
+										<a href="javascript:void(0)" @click="viewUserDomains(user)"
+											class="username-link">
+											{{ user.username }}
+										</a>
+									</div>
+								</el-tooltip>
 							</td>
-							<td>{{ user.email }}</td>
+							<td>
+								<el-tooltip :content="user.email" placement="top" :show-after="500">
+									<div class="truncate-text" style="max-width: 150px;">
+										{{ user.email }}
+									</div>
+								</el-tooltip>
+							</td>
 							<td>
 								<span class="badge" :class="user.isVerified ? 'success' : 'info'">
 									{{ user.isVerified ? '已认证' : '未认证' }}
 								</span>
 							</td>
-							<td>{{ user.ipAddress || '-' }}</td>
+							<td>
+								<el-tooltip :content="user.ipAddress || '-'" placement="top" :show-after="500">
+									<div class="truncate-text" style="max-width: 120px;">
+										{{ user.ipAddress || '-' }}
+									</div>
+								</el-tooltip>
+							</td>
 							<td>{{ user.points || 0 }}</td>
 							<td>
 								<span class="badge" :class="user.role === 'ADMIN' ? 'warning' : ''">
@@ -764,6 +781,13 @@ onMounted(() => {
 	border: 1px solid #e2e8f0;
 	border-radius: 8px;
 	overflow: hidden;
+}
+
+.truncate-text {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: block;
 }
 
 .table th,

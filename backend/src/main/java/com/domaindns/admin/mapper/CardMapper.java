@@ -14,7 +14,7 @@ public interface CardMapper {
     int count(@Param("status") String status);
 
     int insert(@Param("code") String code, @Param("points") Integer points,
-            @Param("expiredAt") LocalDateTime expiredAt);
+            @Param("expiredAt") LocalDateTime expiredAt, @Param("usageLimit") Integer usageLimit);
 
     int batchDelete(@Param("ids") List<Long> ids);
 
@@ -23,4 +23,8 @@ public interface CardMapper {
     Card findByCode(@Param("code") String code);
 
     int markAsUsed(@Param("id") Long id, @Param("usedBy") Long usedBy, @Param("usedAt") LocalDateTime usedAt);
+    
+    int incrementUsage(@Param("id") Long id);
+    
+    int updateStatus(@Param("id") Long id, @Param("status") String status);
 }

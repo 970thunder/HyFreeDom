@@ -63,10 +63,50 @@ public class UserCardController {
         if (card.getExpiredAt() != null && card.getExpiredAt().isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("卡密已过期");
         }
+        
+        // 检查用户是否已兑换过该卡密 (防止重复兑换同一个卡密)
+        if (pointsMapper.checkTransactionExists(userId, "CARD_REDEEM", card.getId()) > 0) {
+            throw new IllegalArgumentException("您已兑换过该卡密，无法重复使用");
+        }
 
-        // 检查卡密是否已被使用
-        if (card.getUsedBy() != null) {
-            throw new IllegalArgumentException("卡密已被使用");
+        // 检查卡密使用次数限制
+        Integer limit = card.getUsageLimit();
+        Integer used = card.getUsedCount() == null ? 0 : card.getUsedCount();
+        
+        // 如果有次数限制且已达上限 (兼容旧数据: limit为null视为1次, usedCount为null视为0)
+        // 注意：旧数据 limit=null, usedCount=0, usedBy=null -> 视为单次卡
+        // 如果 limit=null, 且 usedBy != null -> 已使用
+        // 新逻辑下，limit=null 表示无限次？
+        // 不，之前决定 limit=null 是无限次。
+        // 但是旧数据的 limit 都是 null。如果视 limit=null 为无限次，那旧卡密全变成无限次了？
+        // 必须区分旧卡密和新无限卡密。
+        // 旧卡密：created_at 早于更新时间？或者我们在DB迁移时把旧卡密 limit 设为 1？
+        // 假设我们在DB迁移时会将所有现存卡密的 usage_limit 设为 1。
+        // 如果没有迁移，我们需要代码兼容。
+        // 方案：如果 limit 是 null， check usedBy。如果 usedBy 有值，则已使用。
+        // 但新生成的无限卡密 limit 是 null。
+        // 所以，新生成的无限卡密必须有一个标志。或者我们规定无限卡密的 limit 是 -1 或 0？
+        // 用户输入框为空代表无限制。Controller里我们可以存 -1 代表无限制。
+        // 让我们修改 Controller，存 -1 代表无限制。
+        // 这样 limit=null 可以保留给旧数据，视为 limit=1。
+        
+        // 重新思考 CardController 的修改：
+        // Integer usageLimit = body.get("usageLimit") ...
+        // if (usageLimit == null) usageLimit = 1; (random mode)
+        // visible in Controller: "如果未指定使用次数，默认为1次"
+        // 对于 Custom Code, explicit null means unlimited?
+        // Let's change Controller to store -1 for unlimited.
+        
+        // Back to UserCardController logic assuming limit=-1 is infinite, limit=null is 1 (legacy).
+        int effectiveLimit = (limit == null) ? 1 : limit;
+        
+        if (effectiveLimit != -1 && used >= effectiveLimit) {
+             throw new IllegalArgumentException("卡密已被使用");
+        }
+        
+        // 再次检查 usedBy (针对旧数据或单次卡)
+        if (effectiveLimit == 1 && card.getUsedBy() != null) {
+             throw new IllegalArgumentException("卡密已被使用");
         }
 
         // 获取用户信息
@@ -76,9 +116,18 @@ public class UserCardController {
         }
 
         // 更新卡密状态
-        int updated = cardMapper.markAsUsed(card.getId(), userId, LocalDateTime.now());
-        if (updated == 0) {
-            throw new IllegalArgumentException("卡密状态更新失败，可能已被其他用户使用");
+        // 增加使用次数
+        cardMapper.incrementUsage(card.getId());
+        
+        // 如果是单次卡(或者限制次数卡且达到限制)，标记为 USED
+        // 注意 incrementUsage 是原子操作，但这里我们在事务中，可以后置检查
+        // 或者直接 updateStatus
+        if (effectiveLimit != -1 && (used + 1) >= effectiveLimit) {
+            cardMapper.markAsUsed(card.getId(), userId, LocalDateTime.now());
+        } else {
+            // 对于多次卡/无限卡，我们不设置 used_by (因为有多个用户)，也不设置 status 为 USED (除非耗尽)
+            // 但我们需要记录这次使用吗？ points_transactions 已经记录了。
+            // 仅仅 incrementUsage 即可。
         }
 
         // 更新用户积分

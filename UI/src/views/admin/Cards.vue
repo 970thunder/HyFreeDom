@@ -19,13 +19,22 @@
 					</div>
 					<div class="input-row">
 						<label class="label">数量</label>
-						<input class="input" v-model="form.count" placeholder="例如：100" type="number" min="1"
-							max="1000" />
+						<input class="input" v-model="form.count" placeholder="例如：100" type="number" min="1" max="1000"
+							:disabled="!!form.customCode" />
 					</div>
 					<div class="input-row">
 						<label class="label">有效期（天）</label>
 						<input class="input" v-model="form.validDays" placeholder="例如：30" type="number" min="0"
 							max="3650" />
+					</div>
+					<div class="input-row">
+						<label class="label">自定义卡密（可选）</label>
+						<input class="input" v-model="form.customCode" placeholder="留空则随机生成"
+							@input="onCustomCodeInput" />
+					</div>
+					<div class="input-row">
+						<label class="label">使用次数（可选）</label>
+						<input class="input" v-model="form.usageLimit" placeholder="留空则不限次数" type="number" min="1" />
 					</div>
 				</div>
 				<div class="row">
@@ -106,15 +115,9 @@
 
 			<!-- 分页组件 -->
 			<div class="pagination-container" v-if="total > 0">
-				<el-pagination
-					v-model:current-page="filters.page"
-					v-model:page-size="filters.size"
-					:page-sizes="[10, 20, 50, 100]"
-					:total="total"
-					layout="total, sizes, prev, pager, next, jumper"
-					@size-change="handleSizeChange"
-					@current-change="handleCurrentChange"
-				/>
+				<el-pagination v-model:current-page="filters.page" v-model:page-size="filters.size"
+					:page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper"
+					@size-change="handleSizeChange" @current-change="handleCurrentChange" />
 			</div>
 		</div>
 	</main>
@@ -140,8 +143,17 @@ const selectAll = ref(false)
 const form = reactive({
 	points: '',
 	count: '',
-	validDays: ''
+	validDays: '',
+	customCode: '',
+	usageLimit: ''
 })
+
+// 监听自定义卡密输入
+const onCustomCodeInput = () => {
+	if (form.customCode) {
+		form.count = 1
+	}
+}
 
 // 过滤器
 const filters = reactive({
@@ -176,8 +188,13 @@ const loadCards = async () => {
 const generateCards = async () => {
 	try {
 		// 表单验证
-		if (!form.points || !form.count) {
-			ElMessage.error('请填写面值和数量')
+		if (!form.points) {
+			ElMessage.error('请填写面值')
+			return
+		}
+
+		if (!form.customCode && !form.count) {
+			ElMessage.error('请填写数量')
 			return
 		}
 
@@ -186,7 +203,7 @@ const generateCards = async () => {
 			return
 		}
 
-		if (form.count < 1 || form.count > 1000) {
+		if (!form.customCode && (form.count < 1 || form.count > 1000)) {
 			ElMessage.error('数量必须在 1-1000 之间')
 			return
 		}
@@ -196,8 +213,12 @@ const generateCards = async () => {
 			return
 		}
 
+		const confirmMsg = form.customCode
+			? `确定要生成自定义卡密 "${form.customCode}" (面值 ${form.points} 积分${form.usageLimit ? ', 可用 ' + form.usageLimit + ' 次' : ', 不限次数'}) 吗？`
+			: `确定要生成 ${form.count} 张面值为 ${form.points} 积分的卡密${form.usageLimit && form.usageLimit != 1 ? ' (每张可用 ' + form.usageLimit + ' 次)' : ''}吗？`;
+
 		await ElMessageBox.confirm(
-			`确定要生成 ${form.count} 张面值为 ${form.points} 积分的卡密吗？`,
+			confirmMsg,
 			'确认生成',
 			{
 				confirmButtonText: '确定',
@@ -209,9 +230,11 @@ const generateCards = async () => {
 		isLoading.value = true
 
 		const data = {
-			count: parseInt(form.count),
+			count: form.customCode ? 1 : parseInt(form.count),
 			points: parseInt(form.points),
-			validDays: form.validDays ? parseInt(form.validDays) : null
+			validDays: form.validDays ? parseInt(form.validDays) : null,
+			customCode: form.customCode || null,
+			usageLimit: form.usageLimit ? parseInt(form.usageLimit) : null
 		}
 
 		const response = await apiPost('/api/admin/cards/generate', data, { token: authStore.adminToken })
@@ -221,6 +244,8 @@ const generateCards = async () => {
 		form.points = ''
 		form.count = ''
 		form.validDays = ''
+		form.customCode = ''
+		form.usageLimit = ''
 
 		await loadCards()
 	} catch (error) {
@@ -288,7 +313,7 @@ const deleteCard = async (cardId) => {
 				'Content-Type': 'application/json'
 			}
 		})
-		
+
 		ElMessage.success('卡密删除成功')
 		await loadCards()
 	} catch (error) {
@@ -324,7 +349,7 @@ const batchDelete = async () => {
 			},
 			body: JSON.stringify({ ids: selectedCards.value })
 		})
-		
+
 		ElMessage.success('批量删除成功')
 		selectedCards.value = []
 		selectAll.value = false

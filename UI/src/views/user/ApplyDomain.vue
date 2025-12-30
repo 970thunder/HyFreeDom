@@ -127,7 +127,7 @@
 								<div class="tooltip-wrapper">
 									<span class="tooltip-icon">?</span>
 									<div class="tooltip-text">
-										应广大需求希望能开放免费专属域名，自己管理DNS记录，站长购入一个新域名试运营，如果网站还有资金，未来还会继续运营下去😭</div>
+										应广大需求希望能开放免费专属域名，自己管理DNS记录，站长购入一个新域名试运营，如果大家喜欢的话，我会一直续费下去，V我50😏</div>
 								</div>
 							</div>
 							<select class="select" v-model="exclusiveData.zoneId" @change="onExclusiveZoneChange">
@@ -893,9 +893,9 @@ onUnmounted(() => {
 
 .tooltip-text {
 	position: absolute;
-	bottom: 100%;
+	top: 50%;
 	left: 100%;
-	transform: translateX(10px) translateY(50%);
+	transform: translateX(10px) translateY(-50%);
 	background-color: #1e293b;
 	color: white;
 	padding: 8px 12px;
