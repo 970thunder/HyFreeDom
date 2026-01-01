@@ -183,12 +183,20 @@ public class AuthService {
 
     private LoginResp doLogin(LoginReq req, String requiredRole, String ipAddress) {
         User u = null;
+        
+        // 前端使用同一个输入框，username 字段可能包含用户名或邮箱
+        // 如果包含 @ 符号，当作邮箱处理；否则当作用户名处理
         if (req.username != null && !req.username.isBlank()) {
-            u = userMapper.findByUsername(req.username);
+            String account = req.username.trim();
+            if (account.contains("@")) {
+                // 包含 @ 符号，当作邮箱查询
+                u = userMapper.findByEmail(account);
+            } else {
+                // 不包含 @ 符号，当作用户名查询
+                u = userMapper.findByUsername(account);
+            }
         }
-        if (u == null && req.email != null && !req.email.isBlank()) {
-            u = userMapper.findByEmail(req.email);
-        }
+        
         if (u == null)
             throw new IllegalArgumentException("用户不存在或密码错误");
         if (!encoder.matches(req.password, u.getPasswordHash()))

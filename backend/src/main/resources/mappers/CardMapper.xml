@@ -11,8 +11,6 @@
 		<result property="usedByUsername" column="used_by_username" />
 		<result property="usedAt" column="used_at" />
 		<result property="createdAt" column="created_at" />
-		<result property="usageLimit" column="usage_limit" />
-		<result property="usedCount" column="used_count" />
 	</resultMap>
 
 	<select id="list" resultMap="CardMap">
@@ -34,8 +32,8 @@
 	</select>
 
 	<insert id="insert">
-		INSERT INTO cards(code,points,status,expired_at,usage_limit,used_count)
-		VALUES(#{code},#{points},'ACTIVE',#{expiredAt},#{usageLimit},0)
+		INSERT INTO cards(code,points,status,expired_at)
+		VALUES(#{code},#{points},'ACTIVE',#{expiredAt})
 	</insert>
 
 	<delete id="batchDelete">
@@ -57,13 +55,5 @@
 		UPDATE cards 
 		SET status = 'USED', used_by = #{usedBy}, used_at = #{usedAt}
 		WHERE id = #{id} AND status = 'ACTIVE'
-	</update>
-
-	<update id="incrementUsage">
-		UPDATE cards SET used_count = used_count + 1 WHERE id = #{id}
-	</update>
-
-	<update id="updateStatus">
-		UPDATE cards SET status = #{status} WHERE id = #{id}
 	</update>
 </mapper>

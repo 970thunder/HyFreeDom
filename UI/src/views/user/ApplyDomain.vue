@@ -170,7 +170,7 @@
 							</div>
 							<div class="input-row">
 								<label class="label">主机记录 (用于校验)</label>
-								<input class="input" v-model="exclusiveData.txtHost" placeholder="例如：_dnsauth">
+								<input class="input" v-model="exclusiveData.txtHost" placeholder="例如：_dnspodcheck">
 							</div>
 							<div class="input-row">
 								<label class="label">记录值 (用于校验)</label>

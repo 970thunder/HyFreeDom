@@ -92,14 +92,6 @@
 							<td class="card-code">{{ card.code }}</td>
 							<td>{{ card.points }}</td>
 							<td>
-								<span v-if="card.usageLimit === -1">
-									{{ card.usedCount || 0 }} / ∞
-								</span>
-								<span v-else>
-									{{ card.usedCount || 0 }} / {{ card.usageLimit || 1 }}
-								</span>
-							</td>
-							<td>
 								<span class="badge" :class="getStatusClass(card.status)">
 									{{ getStatusText(card.status) }}
 								</span>

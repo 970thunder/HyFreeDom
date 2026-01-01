@@ -57,7 +57,6 @@ public class UserDomainService {
         // 先在 Cloudflare 创建 DNS 记录，成功后再扣积分和落库
         int ttlToUse = ttl != null ? ttl : getDefaultTtl();
         validateRecord(type, value);
-        String bodyJson = buildCfRecordJson(prefix + "." + z.getName(), type, value, ttlToUse);
         String fullDomain = prefix + "." + z.getName();
 
         // 前置重复校验：同用户是否已申请过该域名
@@ -66,11 +65,44 @@ public class UserDomainService {
         // Cloudflare 侧是否已有记录（本地镜像）
         if (dnsRecordMapper.countByZoneAndName(z.getId(), fullDomain) > 0)
             throw new IllegalArgumentException("该子域名已被占用");
+        
         Long localDnsRecordId;
         try {
-            dnsRecordService.create(z.getId(), bodyJson);
-            // 读取本地镜像以获取刚刚创建的记录 id
-            localDnsRecordId = fetchLocalDnsRecordId(z.getId(), fullDomain);
+            // 特殊处理 NS 记录：如果值包含空格，拆分为多个 NS 记录
+            String typeUpper = type.toUpperCase(Locale.ROOT);
+            if ("NS".equals(typeUpper) && value != null && value.contains(" ")) {
+                // 拆分多个 NS 记录值
+                String[] nsValues = value.trim().split("\\s+");
+                if (nsValues.length == 0) {
+                    throw new IllegalArgumentException("NS 记录值不能为空");
+                }
+                
+                // 创建第一个 NS 记录（作为主记录）
+                String firstNsValue = normalizeNsValue(nsValues[0]);
+                String bodyJson = buildCfRecordJson(fullDomain, type, firstNsValue, ttlToUse);
+                dnsRecordService.create(z.getId(), bodyJson);
+                localDnsRecordId = fetchLocalDnsRecordId(z.getId(), fullDomain);
+                
+                // 创建其他 NS 记录（使用相同的名称，Cloudflare 会合并）
+                for (int i = 1; i < nsValues.length; i++) {
+                    String nsValue = normalizeNsValue(nsValues[i]);
+                    if (!nsValue.isEmpty()) {
+                        String additionalBodyJson = buildCfRecordJson(fullDomain, type, nsValue, ttlToUse);
+                        try {
+                            dnsRecordService.create(z.getId(), additionalBodyJson);
+                        } catch (Exception e) {
+                            // 如果创建额外的 NS 记录失败，记录日志但不影响主流程
+                            System.err.println("创建额外 NS 记录失败: " + e.getMessage());
+                        }
+                    }
+                }
+            } else {
+                // 普通记录类型，直接创建
+                String normalizedValue = "NS".equals(typeUpper) ? normalizeNsValue(value) : value;
+                String bodyJson = buildCfRecordJson(fullDomain, type, normalizedValue, ttlToUse);
+                dnsRecordService.create(z.getId(), bodyJson);
+                localDnsRecordId = fetchLocalDnsRecordId(z.getId(), fullDomain);
+            }
         } catch (Exception e) {
             throw new IllegalStateException("创建 DNS 记录失败: " + e.getMessage());
         }
@@ -249,8 +281,47 @@ public class UserDomainService {
         } else if (t.equals("AAAA")) {
             if (!value.contains(":"))
                 throw new IllegalArgumentException("AAAA 记录需要 IPv6 地址");
+        } else if (t.equals("NS")) {
+            // NS 记录验证：值必须是有效的域名格式
+            if (value == null || value.trim().isEmpty())
+                throw new IllegalArgumentException("NS 记录值不能为空");
+            // 如果包含空格，验证每个部分
+            String[] parts = value.trim().split("\\s+");
+            for (String part : parts) {
+                String normalized = normalizeNsValue(part);
+                if (normalized.isEmpty() || !isValidDomain(normalized)) {
+                    throw new IllegalArgumentException("NS 记录值格式无效: " + part);
+                }
+            }
         } else if (t.equals("CNAME") || t.equals("TXT")) {
             // 基础校验略过，可按需增强
         }
+    }
+    
+    /**
+     * 规范化 NS 记录值：确保是完整的域名格式
+     * Cloudflare 要求 NS 记录的值必须是完整的域名（FQDN）
+     */
+    private String normalizeNsValue(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return "";
+        }
+        String normalized = value.trim();
+        // 如果域名不以点结尾，添加点使其成为 FQDN
+        // 但 Cloudflare 实际上不需要点结尾，所以这里只做基本清理
+        return normalized;
+    }
+    
+    /**
+     * 验证是否为有效的域名格式
+     */
+    private boolean isValidDomain(String domain) {
+        if (domain == null || domain.isEmpty()) {
+            return false;
+        }
+        // 基本的域名格式验证：允许字母、数字、点、连字符
+        // 不能以点或连字符开头或结尾（除非是根域名）
+        return domain.matches("^([a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,}$") ||
+               domain.matches("^[a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?$");
     }
 }

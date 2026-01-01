@@ -30,8 +30,8 @@ public class AuthDtos {
     }
 
     public static class LoginReq {
-        public String username;
-        public String email;
+        @NotBlank(message = "用户名或邮箱必填")
+        public String username; // 可以接受用户名或邮箱
         @NotBlank(message = "密码必填")
         public String password;
     }

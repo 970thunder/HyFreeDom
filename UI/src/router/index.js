@@ -52,16 +52,15 @@ router.beforeEach((to, from, next) => {
     const authStore = useAuthStore()
 
     // 只在首次访问时加载状态，避免从登录页跳转时重新加载导致状态丢失
+    // 注意：从登录页跳转时，状态已经是最新的，不需要重新加载
     if (from.path === '/' && !authStore.isLoggedIn && !authStore.isAdminLoggedIn) {
         authStore.loadFromStorage()
     }
 
-    // 调试日志已移除
-
     // 管理员路由需要认证
     if (to.path.startsWith('/admin') && to.path !== '/admin/login') {
+        // 不要从登录页跳转时重新加载状态，因为状态已经是最新的
         if (!authStore.isAdminLoggedIn || !authStore.adminToken) {
-            // 调试日志已移除
             next('/admin/login')
             return
         }
@@ -69,8 +68,8 @@ router.beforeEach((to, from, next) => {
 
     // 用户路由需要认证
     if (to.path.startsWith('/user') && to.path !== '/user/login' && to.path !== '/user/register' && to.path !== '/user/forgot') {
+        // 不要从登录页跳转时重新加载状态，因为状态已经是最新的
         if (!authStore.isLoggedIn || !authStore.token) {
-            // 调试日志已移除
             next('/user/login')
             return
         }

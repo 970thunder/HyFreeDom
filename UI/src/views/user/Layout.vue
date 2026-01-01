@@ -380,6 +380,17 @@ watch(() => authStore.user, (newUser) => {
 	}
 }, { deep: true })
 
+// 监听路由变化，确保每次进入用户页面都检查公告
+// 使用 watch 监听路由，这样可以在组件卸载时自动清理
+watch(() => router.currentRoute.value.path, (newPath) => {
+	if (newPath.startsWith('/user') && newPath !== '/user/login' && newPath !== '/user/register') {
+		// 延迟检查，确保页面切换完成
+		setTimeout(() => {
+			checkAnnouncementModal()
+		}, 500)
+	}
+}, { immediate: false })
+
 onMounted(() => {
 	checkMobile()
 	window.addEventListener('resize', checkMobile)
@@ -389,16 +400,6 @@ onMounted(() => {
 
 	// 检查是否需要显示公告弹窗
 	checkAnnouncementModal()
-
-	// 监听路由变化，确保每次进入用户页面都检查公告
-	let unwatchRoute = router.afterEach((to) => {
-		if (to.path.startsWith('/user') && to.path !== '/user/login' && to.path !== '/user/register') {
-			// 延迟检查，确保页面切换完成
-			setTimeout(() => {
-				checkAnnouncementModal()
-			}, 500)
-		}
-	})
 
 	// 监听token过期事件
 	const handleTokenExpired = () => {
@@ -422,10 +423,7 @@ onUnmounted(() => {
 		window.removeEventListener('token-expired', window._tokenExpiredHandler)
 		delete window._tokenExpiredHandler
 	}
-	// 清理路由监听器
-	if (unwatchRoute) {
-		unwatchRoute()
-	}
+	// watch 监听器会在组件卸载时自动清理，无需手动处理
 })
 </script>
 

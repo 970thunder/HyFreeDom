@@ -53,38 +53,11 @@ public class CardController {
         int points = Integer.parseInt(body.getOrDefault("points", 0).toString());
         Integer validDays = body.get("validDays") == null ? null : Integer.valueOf(body.get("validDays").toString());
         LocalDateTime expiredAt = validDays == null ? null : LocalDateTime.now().plusDays(validDays);
-
-        // 获取自定义卡密和使用次数
-        String customCode = (String) body.get("customCode");
-        Integer usageLimit = body.get("usageLimit") == null || body.get("usageLimit").toString().isEmpty()
-                ? null
-                : Integer.valueOf(body.get("usageLimit").toString());
-
         int created = 0;
-
-        if (customCode != null && !customCode.trim().isEmpty()) {
-            // 自定义卡密模式
-            customCode = customCode.trim().toUpperCase();
-            // 检查是否存在
-            if (mapper.findByCode(customCode) != null) {
-                throw new IllegalArgumentException("卡密 " + customCode + " 已存在");
-            }
-            // 如果未指定使用次数，默认为-1（不限次数）
-            Integer finalLimit = (usageLimit == null) ? -1 : usageLimit;
-            created += mapper.insert(customCode, points, expiredAt, finalLimit);
-        } else {
-            // 随机生成模式
-            // 如果未指定使用次数，默认为1次（兼容旧逻辑）
-            if (usageLimit == null) {
-                usageLimit = 1;
-            }
-
-            for (int i = 0; i < count; i++) {
-                String code = randomCode(16);
-                created += mapper.insert(code, points, expiredAt, usageLimit);
-            }
+        for (int i = 0; i < count; i++) {
+            String code = randomCode(16);
+            created += mapper.insert(code, points, expiredAt);
         }
-
         Map<String, Object> m = new HashMap<>();
         m.put("count", created);
         return ApiResponse.ok(m);

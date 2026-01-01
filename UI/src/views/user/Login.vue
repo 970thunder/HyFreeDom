@@ -78,7 +78,7 @@
 	</div>
 </template>
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.js'
 import { ElMessage } from 'element-plus'
@@ -125,14 +125,17 @@ const onSubmit = async () => {
 				authStore.clearRememberedUsername()
 			}
 
-			// 调试日志已移除
-
 			ElMessage.success('登录成功')
 
-			// 延迟跳转，确保状态完全保存
-			setTimeout(() => {
-				router.push('/user/dashboard')
-			}, 100)
+			// 等待 Vue 响应式系统更新完成，确保状态已保存
+			await nextTick()
+
+			// 再等待一个微任务，确保所有状态更新完成
+			await new Promise(resolve => setTimeout(resolve, 0))
+
+			// 使用 replace 而不是 push，避免历史记录问题
+			// 确保状态完全保存后再跳转
+			await router.replace('/user/dashboard')
 		} else {
 			errorMessage.value = result.message || '登录失败'
 		}

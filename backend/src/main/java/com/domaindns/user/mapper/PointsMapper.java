@@ -42,8 +42,4 @@ public interface PointsMapper {
 
         // 管理员统计所有积分流水数量
         int countAll(@Param("keyword") String keyword, @Param("type") String type);
-
-        // 检查特定类型的交易是否存在
-        int checkTransactionExists(@Param("userId") Long userId, @Param("type") String type,
-                        @Param("relatedId") Long relatedId);
 }
