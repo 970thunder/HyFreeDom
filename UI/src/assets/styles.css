@@ -552,7 +552,7 @@ body::before {
     .table td {
         border: none;
         position: relative;
-        padding-left: 50%;
+        padding-left: 30%;
         white-space: normal;
         text-align: left;
     }

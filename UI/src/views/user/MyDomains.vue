@@ -40,11 +40,11 @@
 				<tbody>
 					<tr v-for="domain in domains" :key="domain.id">
 						<td data-label="域名" class="domain-cell">
-						<div class="domain-with-tag">
-							<span>{{ domain.fullDomain }}</span>
-							<span v-if="isExclusiveDomain(domain)" class="exclusive-tag">专属域名</span>
-						</div>
-					</td>
+							<div class="domain-with-tag">
+								<span>{{ domain.fullDomain }}</span>
+								<span v-if="isExclusiveDomain(domain)" class="exclusive-tag">专属域名</span>
+							</div>
+						</td>
 						<td data-label="记录类型">{{ getRecordType(domain) }}</td>
 						<td data-label="记录值">{{ getRecordValue(domain) }}</td>
 						<td data-label="TTL">{{ getRecordTtl(domain) }}</td>
@@ -53,9 +53,9 @@
 							<span class="badge" :class="getStatusClass(domain.status)">{{ domain.status }}</span>
 						</td>
 						<td data-label="操作" class="row">
-						<button class="btn outline" @click="editRecord(domain)" :disabled="isDeleting">
-							编辑记录
-						</button>
+							<button class="btn outline" @click="editRecord(domain)" :disabled="isDeleting">
+								编辑记录
+							</button>
 							<button class="btn danger" @click="releaseDomain(domain)" :disabled="isDeleting">
 								释放
 							</button>
@@ -85,11 +85,12 @@
 				</div>
 				<div class="form-group">
 					<label>记录类型</label>
-					<select v-model="editForm.type" class="select">
+					<select v-model="editForm.type" class="select" :disabled="isExclusiveDomain(editingDomain)">
 						<option value="A">A (IPv4地址)</option>
 						<option value="AAAA">AAAA (IPv6地址)</option>
 						<option value="CNAME">CNAME (别名)</option>
 						<option value="TXT">TXT (文本记录)</option>
+						<option value="NS">NS (域名服务器)</option>
 					</select>
 				</div>
 				<div class="form-group" v-if="editForm.type === 'NS'">
@@ -235,18 +236,21 @@ const isExclusiveDomain = (domain) => {
 // 编辑记录
 const editRecord = (domain) => {
 	editingDomain.value = domain
-	
+
 	let val1 = domain.recordValue || ''
 	let val2 = ''
-	
+
 	if (domain.recordType === 'NS' && val1.includes(' ')) {
 		const parts = val1.split(' ')
 		val1 = parts[0]
 		val2 = parts.slice(1).join(' ')
 	}
 
+	// 如果是专属域名，强制记录类型为NS
+	const isExclusive = isExclusiveDomain(domain)
+
 	editForm.value = {
-		type: domain.recordType || 'A',
+		type: isExclusive ? 'NS' : (domain.recordType || 'A'),
 		value: val1,
 		value2: val2,
 		ttl: domain.recordTtl || 120,
@@ -583,9 +587,11 @@ onMounted(() => {
 	0% {
 		transform: scale(1);
 	}
+
 	50% {
 		transform: scale(1.05);
 	}
+
 	100% {
 		transform: scale(1);
 	}

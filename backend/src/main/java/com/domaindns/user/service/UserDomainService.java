@@ -157,6 +157,9 @@ public class UserDomainService {
 
         if (isNsUpdate || hasMultipleExisting) {
             // 1. 删除所有现有记录
+            // 先断开外键关联，防止删除记录时报错
+            userDomainMapper.updateDnsRecordId(ud.getId(), null);
+
             if (existingRecords != null) {
                 for (com.domaindns.cf.model.DnsRecord r : existingRecords) {
                     try {
