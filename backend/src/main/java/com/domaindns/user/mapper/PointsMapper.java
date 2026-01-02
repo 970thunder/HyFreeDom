@@ -41,5 +41,8 @@ public interface PointsMapper {
                         @Param("size") Integer size);
 
         // 管理员统计所有积分流水数量
-        int countAll(@Param("keyword") String keyword, @Param("type") String type);
+    int countAll(@Param("keyword") String keyword, @Param("type") String type);
+
+    // 查询用户是否兑换过某个卡密
+    int countUserCardRedemption(@Param("userId") Long userId, @Param("cardId") Long cardId);
 }

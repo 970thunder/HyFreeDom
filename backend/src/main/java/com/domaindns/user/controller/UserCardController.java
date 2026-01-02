@@ -55,8 +55,11 @@ public class UserCardController {
         }
 
         // 检查卡密状态
+        if ("USED".equals(card.getStatus())) {
+            throw new IllegalArgumentException("卡密已被使用完毕");
+        }
         if (!"ACTIVE".equals(card.getStatus())) {
-            throw new IllegalArgumentException("卡密已被使用或已失效");
+            throw new IllegalArgumentException("卡密无效或已过期");
         }
 
         // 检查卡密是否过期
@@ -64,9 +67,14 @@ public class UserCardController {
             throw new IllegalArgumentException("卡密已过期");
         }
 
-        // 检查卡密是否已被使用
-        if (card.getUsedBy() != null) {
-            throw new IllegalArgumentException("卡密已被使用");
+        // 检查卡密使用次数限制
+        if (card.getUsageLimit() != null && card.getUsedCount() >= card.getUsageLimit()) {
+            throw new IllegalArgumentException("卡密已被使用完毕");
+        }
+
+        // 检查用户是否已经使用过该卡密
+        if (pointsMapper.countUserCardRedemption(userId, card.getId()) > 0) {
+            throw new IllegalArgumentException("您已经兑换过该卡密，不能重复兑换");
         }
 
         // 获取用户信息
@@ -78,7 +86,7 @@ public class UserCardController {
         // 更新卡密状态
         int updated = cardMapper.markAsUsed(card.getId(), userId, LocalDateTime.now());
         if (updated == 0) {
-            throw new IllegalArgumentException("卡密状态更新失败，可能已被其他用户使用");
+            throw new IllegalArgumentException("卡密兑换失败，可能已被抢先兑换完毕");
         }
 
         // 更新用户积分

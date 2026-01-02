@@ -106,5 +106,13 @@
             </if>
         </where>
     </select>
+
+    <select id="countUserCardRedemption" resultType="int">
+        SELECT COUNT(1)
+        FROM points_transactions
+        WHERE user_id = #{userId} 
+        AND type = 'CARD_REDEEM' 
+        AND related_id = #{cardId}
+    </select>
 </mapper>
 

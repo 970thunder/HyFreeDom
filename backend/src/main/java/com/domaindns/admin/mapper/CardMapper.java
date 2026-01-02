@@ -14,7 +14,7 @@ public interface CardMapper {
     int count(@Param("status") String status);
 
     int insert(@Param("code") String code, @Param("points") Integer points,
-            @Param("expiredAt") LocalDateTime expiredAt);
+            @Param("expiredAt") LocalDateTime expiredAt, @Param("usageLimit") Integer usageLimit);
 
     int batchDelete(@Param("ids") List<Long> ids);
 

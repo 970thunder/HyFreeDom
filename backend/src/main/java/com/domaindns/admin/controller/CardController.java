@@ -53,11 +53,32 @@ public class CardController {
         int points = Integer.parseInt(body.getOrDefault("points", 0).toString());
         Integer validDays = body.get("validDays") == null ? null : Integer.valueOf(body.get("validDays").toString());
         LocalDateTime expiredAt = validDays == null ? null : LocalDateTime.now().plusDays(validDays);
+        Integer usageLimit = body.get("usageLimit") == null ? null : Integer.valueOf(body.get("usageLimit").toString());
+
+        // 获取自定义卡密
+        String customCode = (String) body.get("customCode");
+
         int created = 0;
-        for (int i = 0; i < count; i++) {
-            String code = randomCode(16);
-            created += mapper.insert(code, points, expiredAt);
+
+        if (customCode != null && !customCode.trim().isEmpty()) {
+            // 自定义卡密模式 - 只生成一张
+            try {
+                created += mapper.insert(customCode.trim(), points, expiredAt, usageLimit);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("卡密 " + customCode + " 已存在");
+            }
+        } else {
+            // 随机模式
+            for (int i = 0; i < count; i++) {
+                String code = randomCode(16);
+                try {
+                    created += mapper.insert(code, points, expiredAt, usageLimit);
+                } catch (Exception e) {
+                    i--; // 重试
+                }
+            }
         }
+
         Map<String, Object> m = new HashMap<>();
         m.put("count", created);
         return ApiResponse.ok(m);
