@@ -63,6 +63,10 @@
 		SELECT * FROM dns_records WHERE zone_id=#{zoneId} AND name=#{name} ORDER BY id DESC LIMIT 1
 	</select>
 
+	<select id="findAllByZoneAndName" resultMap="RecMap">
+		SELECT * FROM dns_records WHERE zone_id=#{zoneId} AND name=#{name}
+	</select>
+
 	<select id="findById" resultMap="RecMap">
 		SELECT * FROM dns_records WHERE id=#{id}
 	</select>

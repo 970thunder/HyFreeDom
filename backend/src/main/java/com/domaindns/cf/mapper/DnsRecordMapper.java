@@ -20,6 +20,8 @@ public interface DnsRecordMapper {
 
         com.domaindns.cf.model.DnsRecord findOneByZoneAndName(@Param("zoneId") Long zoneId, @Param("name") String name);
 
+        List<DnsRecord> findAllByZoneAndName(@Param("zoneId") Long zoneId, @Param("name") String name);
+
         com.domaindns.cf.model.DnsRecord findById(@Param("id") Long id);
 
         int deleteByZoneAndCfRecordId(@Param("zoneId") Long zoneId, @Param("cfRecordId") String cfRecordId);

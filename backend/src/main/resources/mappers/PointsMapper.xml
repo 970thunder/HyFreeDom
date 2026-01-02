@@ -74,7 +74,11 @@
     </select>
 
     <select id="listAll" resultType="java.util.Map">
-        SELECT pt.*, u.username, u.email
+        SELECT 
+            pt.id, pt.user_id as userId, pt.change_amount as changeAmount, 
+            pt.balance_after as balanceAfter, pt.type, pt.remark, 
+            pt.related_id as relatedId, pt.created_at as createdAt,
+            u.username, u.email
         FROM points_transactions pt
         LEFT JOIN users u ON pt.user_id = u.id
         <where>

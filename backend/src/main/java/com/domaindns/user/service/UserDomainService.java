@@ -65,7 +65,7 @@ public class UserDomainService {
         // Cloudflare 侧是否已有记录（本地镜像）
         if (dnsRecordMapper.countByZoneAndName(z.getId(), fullDomain) > 0)
             throw new IllegalArgumentException("该子域名已被占用");
-        
+
         Long localDnsRecordId;
         try {
             // 特殊处理 NS 记录：如果值包含空格，拆分为多个 NS 记录
@@ -76,13 +76,13 @@ public class UserDomainService {
                 if (nsValues.length == 0) {
                     throw new IllegalArgumentException("NS 记录值不能为空");
                 }
-                
+
                 // 创建第一个 NS 记录（作为主记录）
                 String firstNsValue = normalizeNsValue(nsValues[0]);
                 String bodyJson = buildCfRecordJson(fullDomain, type, firstNsValue, ttlToUse);
                 dnsRecordService.create(z.getId(), bodyJson);
                 localDnsRecordId = fetchLocalDnsRecordId(z.getId(), fullDomain);
-                
+
                 // 创建其他 NS 记录（使用相同的名称，Cloudflare 会合并）
                 for (int i = 1; i < nsValues.length; i++) {
                     String nsValue = normalizeNsValue(nsValues[i]);
@@ -111,7 +111,8 @@ public class UserDomainService {
 
         // 扣积分并记录流水
         pointsMapper.adjust(userId, -cost);
-        pointsMapper.insertTxn(userId, -cost, null, "DOMAIN_APPLY",
+        User updatedUser = userMapper.findById(userId);
+        pointsMapper.insertTxn(userId, -cost, updatedUser != null ? updatedUser.getPoints() : null, "DOMAIN_APPLY",
                 "申请域名 " + fullDomain + " 扣除 " + cost + " 积分", null);
     }
 
@@ -136,30 +137,103 @@ public class UserDomainService {
         // 验证记录类型和值
         validateRecord(type, value);
 
-        // 获取DNS记录
-        com.domaindns.cf.model.DnsRecord dnsRecord = null;
-        if (ud.getDnsRecordId() != null) {
-            dnsRecord = dnsRecordMapper.findById(ud.getDnsRecordId());
+        Zone z = zoneMapper.findById(ud.getZoneId());
+        if (z == null) {
+            throw new IllegalArgumentException("域名区域不存在");
         }
-        if (dnsRecord == null) {
-            Zone z = zoneMapper.findById(ud.getZoneId());
-            if (z != null) {
-                dnsRecord = dnsRecordMapper.findOneByZoneAndName(z.getId(), ud.getFullDomain());
+
+        int ttlToUse = ttl != null ? ttl : getDefaultTtl();
+        String typeUpper = type.toUpperCase(Locale.ROOT);
+
+        // 获取所有现有记录
+        java.util.List<com.domaindns.cf.model.DnsRecord> existingRecords = dnsRecordMapper
+                .findAllByZoneAndName(z.getId(), ud.getFullDomain());
+
+        // 策略：如果是 NS 记录或者现有记录多于1条，则采取"全删全建"策略
+        // 否则（普通记录且只有1条），采取"更新"策略
+
+        boolean isNsUpdate = "NS".equals(typeUpper);
+        boolean hasMultipleExisting = existingRecords != null && existingRecords.size() > 1;
+
+        if (isNsUpdate || hasMultipleExisting) {
+            // 1. 删除所有现有记录
+            if (existingRecords != null) {
+                for (com.domaindns.cf.model.DnsRecord r : existingRecords) {
+                    try {
+                        dnsRecordService.delete(z.getId(), r.getCfRecordId());
+                    } catch (Exception ignored) {
+                    }
+                    dnsRecordMapper.deleteByZoneAndCfRecordId(z.getId(), r.getCfRecordId());
+                }
+            }
+
+            // 2. 创建新记录
+            Long newMainRecordId = null;
+
+            if (isNsUpdate && value.contains(" ")) {
+                // NS 记录拆分
+                String[] nsValues = value.trim().split("\\s+");
+                for (int i = 0; i < nsValues.length; i++) {
+                    String nsVal = normalizeNsValue(nsValues[i]);
+                    if (!nsVal.isEmpty()) {
+                        String bodyJson = buildCfRecordJson(ud.getFullDomain(), type, nsVal, ttlToUse);
+                        try {
+                            dnsRecordService.create(z.getId(), bodyJson);
+                            // 如果是第一个记录，获取ID用于更新 UserDomain
+                            if (newMainRecordId == null) {
+                                newMainRecordId = fetchLocalDnsRecordId(z.getId(), ud.getFullDomain());
+                            }
+                        } catch (Exception e) {
+                            throw new IllegalStateException("创建 NS 记录失败: " + e.getMessage());
+                        }
+                    }
+                }
+            } else {
+                // 单条记录创建 (A, CNAME, etc. or Single NS)
+                String val = isNsUpdate ? normalizeNsValue(value) : value;
+                String bodyJson = buildCfRecordJson(ud.getFullDomain(), type, val, ttlToUse);
+                try {
+                    dnsRecordService.create(z.getId(), bodyJson);
+                    newMainRecordId = fetchLocalDnsRecordId(z.getId(), ud.getFullDomain());
+                } catch (Exception e) {
+                    throw new IllegalStateException("创建记录失败: " + e.getMessage());
+                }
+            }
+
+            // 3. 更新 UserDomain 指向新的主记录
+            if (newMainRecordId != null) {
+                userDomainMapper.updateDnsRecordId(ud.getId(), newMainRecordId);
+            }
+
+        } else {
+            // 现有记录0或1条，且非NS拆分情况 -> 尝试更新
+            com.domaindns.cf.model.DnsRecord dnsRecord = null;
+            if (existingRecords != null && !existingRecords.isEmpty()) {
+                dnsRecord = existingRecords.get(0);
+            }
+
+            if (dnsRecord != null) {
+                // 更新Cloudflare记录
+                String bodyJson = buildCfRecordJson(ud.getFullDomain(), type, value, ttlToUse);
+                try {
+                    dnsRecordService.update(dnsRecord.getZoneId(), dnsRecord.getCfRecordId(), bodyJson);
+                } catch (Exception e) {
+                    throw new IllegalStateException("更新DNS记录失败: " + e.getMessage());
+                }
+            } else {
+                // 理论上不应该发生（记录不存在但UserDomain存在），但作为兜底创建
+                String bodyJson = buildCfRecordJson(ud.getFullDomain(), type, value, ttlToUse);
+                try {
+                    dnsRecordService.create(z.getId(), bodyJson);
+                    Long newId = fetchLocalDnsRecordId(z.getId(), ud.getFullDomain());
+                    userDomainMapper.updateDnsRecordId(ud.getId(), newId);
+                } catch (Exception e) {
+                    throw new IllegalStateException("创建DNS记录失败: " + e.getMessage());
+                }
             }
         }
 
-        if (dnsRecord != null) {
-            // 更新Cloudflare记录
-            int ttlToUse = ttl != null ? ttl : getDefaultTtl();
-            String bodyJson = buildCfRecordJson(ud.getFullDomain(), type, value, ttlToUse);
-            try {
-                dnsRecordService.update(dnsRecord.getZoneId(), dnsRecord.getCfRecordId(), bodyJson);
-            } catch (Exception e) {
-                throw new IllegalStateException("更新DNS记录失败: " + e.getMessage());
-            }
-        }
-
-        // 更新本地记录
+        // 更新本地记录信息 (remark)
         userDomainMapper.updateRecordInfo(id, type, value, ttl, remark);
     }
 
@@ -168,33 +242,31 @@ public class UserDomainService {
         com.domaindns.user.model.UserDomain ud = userDomainMapper.findByIdAndUser(id, userId);
         if (ud == null)
             throw new IllegalArgumentException("记录不存在");
-        // 删除 Cloudflare 记录（若本地有 dns_record_id）
-        // 删除 Cloudflare 及本地记录
+
         Zone zForDelete = zoneMapper.findById(ud.getZoneId());
         if (zForDelete != null) {
-            com.domaindns.cf.model.DnsRecord r = null;
-            if (ud.getDnsRecordId() != null) {
-                r = dnsRecordMapper.findById(ud.getDnsRecordId());
-            }
-            if (r == null) {
-                r = dnsRecordMapper.findOneByZoneAndName(zForDelete.getId(), ud.getFullDomain());
-            }
-            if (r != null) {
-                try {
-                    dnsRecordService.delete(zForDelete.getId(), r.getCfRecordId());
-                } catch (Exception ignored) {
+            // 查找所有相关的DNS记录（特别是针对专属域名NS记录，可能有多条）
+            java.util.List<com.domaindns.cf.model.DnsRecord> records = dnsRecordMapper
+                    .findAllByZoneAndName(zForDelete.getId(), ud.getFullDomain());
+
+            // 先断开外键，避免删除 dns_records 时违反约束
+            userDomainMapper.updateDnsRecordId(ud.getId(), null);
+
+            if (records != null && !records.isEmpty()) {
+                for (com.domaindns.cf.model.DnsRecord r : records) {
+                    try {
+                        dnsRecordService.delete(zForDelete.getId(), r.getCfRecordId());
+                    } catch (Exception ignored) {
+                    }
+                    dnsRecordMapper.deleteByZoneAndCfRecordId(zForDelete.getId(), r.getCfRecordId());
                 }
-                // 先断开外键再删除本地镜像
-                userDomainMapper.updateDnsRecordId(ud.getId(), null);
-                dnsRecordMapper.deleteByZoneAndCfRecordId(zForDelete.getId(), r.getCfRecordId());
             } else {
-                // 未找到镜像，直接删除 user_domain，再按名称兜底清理本地
-                userDomainMapper.deleteByIdAndUser(id, userId);
+                // 如果没有找到记录，尝试按名称兜底清理
                 dnsRecordMapper.deleteByZoneAndName(zForDelete.getId(), ud.getFullDomain());
-                // 积分返还逻辑继续
             }
         }
-        // 若尚未删除 user_domain，这里删除（常规路径）
+
+        // 删除 user_domain
         userDomainMapper.deleteByIdAndUser(id, userId);
 
         // 返还 50% 创建时消耗的积分（按当前规则重算成本的一半）
@@ -204,7 +276,8 @@ public class UserDomainService {
         int cost = (int) Math.ceil(baseCost * multiplier);
         int refund = Math.max(1, cost / 2);
         pointsMapper.adjust(userId, refund);
-        pointsMapper.insertTxn(userId, refund, null, "DOMAIN_RELEASE",
+        User updatedUser = userMapper.findById(userId);
+        pointsMapper.insertTxn(userId, refund, updatedUser != null ? updatedUser.getPoints() : null, "DOMAIN_RELEASE",
                 "释放域名 " + ud.getFullDomain() + " 返还 " + refund + " 积分", id);
     }
 
@@ -297,7 +370,7 @@ public class UserDomainService {
             // 基础校验略过，可按需增强
         }
     }
-    
+
     /**
      * 规范化 NS 记录值：确保是完整的域名格式
      * Cloudflare 要求 NS 记录的值必须是完整的域名（FQDN）
@@ -311,7 +384,7 @@ public class UserDomainService {
         // 但 Cloudflare 实际上不需要点结尾，所以这里只做基本清理
         return normalized;
     }
-    
+
     /**
      * 验证是否为有效的域名格式
      */
@@ -322,6 +395,6 @@ public class UserDomainService {
         // 基本的域名格式验证：允许字母、数字、点、连字符
         // 不能以点或连字符开头或结尾（除非是根域名）
         return domain.matches("^([a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,}$") ||
-               domain.matches("^[a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?$");
+                domain.matches("^[a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?$");
     }
 }

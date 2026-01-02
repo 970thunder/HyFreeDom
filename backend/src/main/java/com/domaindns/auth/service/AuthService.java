@@ -158,13 +158,14 @@ public class AuthService {
         userMapper.insert(u);
 
         // 记录积分流水
-        pointsMapper.insertTxn(u.getId(), initialPoints, totalPoints, "REGISTER", "注册赠送积分", null);
+        pointsMapper.insertTxn(u.getId(), initialPoints, initialPoints, "REGISTER", "注册赠送积分", null);
         if (inviterId != null) {
             pointsMapper.insertTxn(u.getId(), inviteePoints, totalPoints, "INVITE_CODE", "使用邀请码奖励积分", inviterId);
 
             // 给邀请人加积分
             pointsMapper.adjust(inviterId, inviterPoints);
-            pointsMapper.insertTxn(inviterId, inviterPoints, null, "INVITE_REWARD", "邀请用户 " + username + " 获得奖励积分",
+            User inviter = userMapper.findById(inviterId);
+            pointsMapper.insertTxn(inviterId, inviterPoints, inviter != null ? inviter.getPoints() : null, "INVITE_REWARD", "邀请用户 " + username + " 获得奖励积分",
                     u.getId());
 
             // 更新邀请码使用次数

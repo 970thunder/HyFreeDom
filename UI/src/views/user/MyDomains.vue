@@ -39,7 +39,12 @@
 				</thead>
 				<tbody>
 					<tr v-for="domain in domains" :key="domain.id">
-						<td data-label="域名">{{ domain.fullDomain }}</td>
+						<td data-label="域名" class="domain-cell">
+						<div class="domain-with-tag">
+							<span>{{ domain.fullDomain }}</span>
+							<span v-if="isExclusiveDomain(domain)" class="exclusive-tag">专属域名</span>
+						</div>
+					</td>
 						<td data-label="记录类型">{{ getRecordType(domain) }}</td>
 						<td data-label="记录值">{{ getRecordValue(domain) }}</td>
 						<td data-label="TTL">{{ getRecordTtl(domain) }}</td>
@@ -48,9 +53,9 @@
 							<span class="badge" :class="getStatusClass(domain.status)">{{ domain.status }}</span>
 						</td>
 						<td data-label="操作" class="row">
-							<button class="btn outline" @click="editRecord(domain)" :disabled="isDeleting">
-								编辑记录
-							</button>
+						<button class="btn outline" @click="editRecord(domain)" :disabled="isDeleting">
+							编辑记录
+						</button>
 							<button class="btn danger" @click="releaseDomain(domain)" :disabled="isDeleting">
 								释放
 							</button>
@@ -87,7 +92,15 @@
 						<option value="TXT">TXT (文本记录)</option>
 					</select>
 				</div>
-				<div class="form-group">
+				<div class="form-group" v-if="editForm.type === 'NS'">
+					<label>记录值 (NS1)</label>
+					<input v-model="editForm.value" type="text" class="input" placeholder="请输入 NS1 记录值" />
+				</div>
+				<div class="form-group" v-if="editForm.type === 'NS'">
+					<label>记录值 (NS2)</label>
+					<input v-model="editForm.value2" type="text" class="input" placeholder="请输入 NS2 记录值" />
+				</div>
+				<div class="form-group" v-else>
 					<label>记录值</label>
 					<input v-model="editForm.value" type="text" class="input" placeholder="请输入记录值" />
 				</div>
@@ -199,8 +212,13 @@ const getRecordType = (domain) => {
 	return domain.recordType || 'A'
 }
 
-// 获取记录值
+//获取记录值
 const getRecordValue = (domain) => {
+	// 对于NS记录，可能包含两条记录值（用空格分隔）
+	if (domain.recordType === 'NS' && domain.recordValue && domain.recordValue.includes(' ')) {
+		const values = domain.recordValue.split(' ')
+		return values.join(', ') // 用逗号分隔显示
+	}
 	return domain.recordValue || '1.2.3.4'
 }
 
@@ -209,12 +227,28 @@ const getRecordTtl = (domain) => {
 	return domain.recordTtl || 120
 }
 
+// 判断是否为专属域名（NS记录类型）
+const isExclusiveDomain = (domain) => {
+	return domain.recordType === 'NS'
+}
+
 // 编辑记录
 const editRecord = (domain) => {
 	editingDomain.value = domain
+	
+	let val1 = domain.recordValue || ''
+	let val2 = ''
+	
+	if (domain.recordType === 'NS' && val1.includes(' ')) {
+		const parts = val1.split(' ')
+		val1 = parts[0]
+		val2 = parts.slice(1).join(' ')
+	}
+
 	editForm.value = {
 		type: domain.recordType || 'A',
-		value: domain.recordValue || '',
+		value: val1,
+		value2: val2,
 		ttl: domain.recordTtl || 120,
 		remark: domain.remark || ''
 	}
@@ -228,6 +262,7 @@ const closeEditModal = () => {
 	editForm.value = {
 		type: 'A',
 		value: '',
+		value2: '',
 		ttl: 120,
 		remark: ''
 	}
@@ -239,9 +274,14 @@ const saveRecord = async () => {
 
 	isSaving.value = true
 	try {
+		let finalValue = editForm.value.value
+		if (editForm.value.type === 'NS' && editForm.value.value2) {
+			finalValue = finalValue + ' ' + editForm.value.value2
+		}
+
 		const response = await apiPut(`/api/user/domains/${editingDomain.value.id}`, {
 			type: editForm.value.type,
-			value: editForm.value.value,
+			value: finalValue,
 			ttl: editForm.value.ttl,
 			remark: editForm.value.remark
 		}, { token: authStore.token })
@@ -252,7 +292,7 @@ const saveRecord = async () => {
 			const domain = domains.value.find(d => d.id === editingDomain.value.id)
 			if (domain) {
 				domain.recordType = editForm.value.type
-				domain.recordValue = editForm.value.value
+				domain.recordValue = finalValue
 				domain.recordTtl = editForm.value.ttl
 				domain.remark = editForm.value.remark
 			}
@@ -518,6 +558,37 @@ onMounted(() => {
 	cursor: not-allowed;
 	transform: none;
 	box-shadow: none;
+}
+
+/* 专属域名橙色小标签样式 */
+.domain-with-tag {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.exclusive-tag {
+	background: linear-gradient(135deg, #ff7e5f 0%, #feb47b 100%);
+	color: white;
+	font-size: 10px;
+	font-weight: bold;
+	padding: 2px 6px;
+	border-radius: 12px;
+	white-space: nowrap;
+	box-shadow: 0 2px 4px rgba(255, 126, 95, 0.3);
+	animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+	0% {
+		transform: scale(1);
+	}
+	50% {
+		transform: scale(1.05);
+	}
+	100% {
+		transform: scale(1);
+	}
 }
 
 /* 响应式设计优化 */

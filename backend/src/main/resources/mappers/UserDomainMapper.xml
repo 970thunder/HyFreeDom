@@ -26,7 +26,9 @@
     </select>
 
     <select id="listByUser" resultMap="UDMap">
-        SELECT ud.*, dr.type as record_type, dr.content as record_value, dr.ttl as record_ttl
+        SELECT ud.*, dr.type as record_type, 
+        (SELECT GROUP_CONCAT(content SEPARATOR ' ') FROM dns_records WHERE zone_id = ud.zone_id AND name = ud.full_domain) as record_value, 
+        dr.ttl as record_ttl
         FROM user_domains ud
         LEFT JOIN dns_records dr ON ud.dns_record_id = dr.id
         WHERE ud.user_id=#{userId}

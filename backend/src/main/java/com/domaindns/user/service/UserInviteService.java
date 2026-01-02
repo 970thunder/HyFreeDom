@@ -99,11 +99,13 @@ public class UserInviteService {
 
         // 发放积分（被邀请者 + 邀请者）
         pointsMapper.adjust(userId, inviteePoints);
-        pointsMapper.insertTxn(userId, inviteePoints, null, "INVITE_CODE",
+        User updatedMe = userMapper.findById(userId);
+        pointsMapper.insertTxn(userId, inviteePoints, updatedMe != null ? updatedMe.getPoints() : null, "INVITE_CODE",
                 "补填邀请码奖励积分", inviterId);
 
         pointsMapper.adjust(inviterId, inviterPoints);
-        pointsMapper.insertTxn(inviterId, inviterPoints, null, "INVITE_REWARD",
+        User updatedInviter = userMapper.findById(inviterId);
+        pointsMapper.insertTxn(inviterId, inviterPoints, updatedInviter != null ? updatedInviter.getPoints() : null, "INVITE_REWARD",
                 "邀请用户 " + me.getUsername() + " 获得奖励积分", userId);
 
         // 更新邀请码使用次数
