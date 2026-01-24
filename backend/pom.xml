@@ -150,7 +150,12 @@
             <version>4.5</version>
             <scope>test</scope>
         </dependency>
-	</dependencies>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>3.13.1</version>
+        </dependency>
+    </dependencies>
 
 	<build>
 		<plugins>

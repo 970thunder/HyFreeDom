@@ -16,15 +16,15 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.Iterator;
+
+import okhttp3.FormBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 @Service
 public class VerificationService {
@@ -177,87 +177,53 @@ public class VerificationService {
             return true;
         }
 
+        String url = "https://eid.shumaidata.com/eid/checkbody";
+
         try {
-            // User provided API details
-            String host = "https://sfzsmyxb.market.alicloudapi.com";
-            String path = "/get/idcard/checkV3";
-            String method = "GET";
+            OkHttpClient client = new OkHttpClient.Builder().build();
+            FormBody.Builder formbuilder = new FormBody.Builder();
+            formbuilder.add("idcard", idCard);
+            formbuilder.add("name", name);
 
-            Map<String, String> querys = new java.util.HashMap<String, String>();
-            querys.put("name", name);
-            querys.put("idcard", idCard);
+            FormBody body = formbuilder.build();
+            Request request = new Request.Builder()
+                    .url(url)
+                    .addHeader("Authorization", "APPCODE " + appCode)
+                    .post(body)
+                    .build();
 
-            StringBuilder sbUrl = new StringBuilder();
-            sbUrl.append(host).append(path).append("?");
-            for (Map.Entry<String, String> e : querys.entrySet()) {
-                sbUrl.append(e.getKey()).append("=").append(URLEncoder.encode(e.getValue(), "UTF-8")).append("&");
-            }
-            String urlStr = sbUrl.toString();
-            if (urlStr.endsWith("&")) {
-                urlStr = urlStr.substring(0, urlStr.length() - 1);
-            }
-
-            URL url = new URL(urlStr);
-            HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
-            httpURLConnection.setRequestMethod(method);
-            httpURLConnection.setRequestProperty("Authorization", "APPCODE " + appCode);
-
-            int httpCode = httpURLConnection.getResponseCode();
-            if (httpCode == 200) {
-                BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(httpURLConnection.getInputStream(), StandardCharsets.UTF_8));
-                StringBuilder result = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    result.append(line);
+            try (Response response = client.newCall(request).execute()) {
+                if (!response.isSuccessful()) {
+                    System.err.println("实名认证API请求失败: " + response.code() + " " + response.message());
+                    return false;
                 }
 
-                // Parse response
-                // Based on user snippet, we should check the body.
-                // Assuming success response structure based on standard Aliyun Market APIs or
-                // simple string check if specific structure is unknown.
-                // However, the user snippet provided System.out.println(response.toString()).
-                // Usually these APIs return JSON. Let's parse it.
+                String resultStr = response.body().string();
                 ObjectMapper mapper = new ObjectMapper();
-                Map<String, Object> map = mapper.readValue(result.toString(), Map.class);
+                Map<String, Object> map = mapper.readValue(resultStr, Map.class);
 
-                // Response format provided by user:
                 // {
-                // "msg": "成功",
-                // "success": true,
-                // "code": 200,
-                // "data": {
-                // "result": 1, // 0:一致 1:不一致 2:无记录
-                // "order_no": "...",
-                // "desc": "不一致",
+                // "code": "0", //返回码，0：成功，非0：失败（详见错误码定义）
+                // "message": "成功", //返回码说明
+                // "result": {
+                // "res": "1", //核验结果状态码，1 一致；2 不一致；3 无记录(预留)
                 // ...
                 // }
                 // }
 
-                // Check success flag first
-                Boolean success = (Boolean) map.get("success");
-                if (success == null || !success) {
-                    return false;
-                }
+                Object codeObj = map.get("code");
+                String code = codeObj != null ? codeObj.toString() : "";
 
-                // Check data result
-                Map<String, Object> data = (Map<String, Object>) map.get("data");
-                if (data != null) {
-                    Object res = data.get("result");
-                    // 0 means consistent (success)
-                    // The result might be Integer or String depending on JSON parsing
-                    if (res != null) {
-                        String resStr = res.toString();
-                        if ("0".equals(resStr)) {
-                            return true;
-                        }
+                if ("0".equals(code)) {
+                    Map<String, Object> result = (Map<String, Object>) map.get("result");
+                    if (result != null) {
+                        Object resObj = result.get("res");
+                        String res = resObj != null ? resObj.toString() : "";
+                        return "1".equals(res); // 1 一致
                     }
                 }
-
-                return false;
-            } else {
-                return false;
             }
+            return false;
         } catch (Exception e) {
             e.printStackTrace();
             return false;

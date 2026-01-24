@@ -63,13 +63,16 @@ public class UserDomainService {
         if (userDomainMapper.countByUserAndDomain(userId, fullDomain) > 0)
             throw new IllegalArgumentException("你已申请过该子域名");
         // Cloudflare 侧是否已有记录（本地镜像）
-        if (dnsRecordMapper.countByZoneAndName(z.getId(), fullDomain) > 0)
-            throw new IllegalArgumentException("该子域名已被占用");
+        // 如果是 TXT 或 NS 记录，不校验重复（因为不同服务商的验证记录名可能相同）
+        String typeUpper = type.toUpperCase(Locale.ROOT);
+        if (!"TXT".equals(typeUpper) && !"NS".equals(typeUpper)) {
+            if (dnsRecordMapper.countByZoneAndName(z.getId(), fullDomain) > 0)
+                throw new IllegalArgumentException("该子域名已被占用");
+        }
 
         Long localDnsRecordId;
         try {
             // 特殊处理 NS 记录：如果值包含空格，拆分为多个 NS 记录
-            String typeUpper = type.toUpperCase(Locale.ROOT);
             if ("NS".equals(typeUpper) && value != null && value.contains(" ")) {
                 // 拆分多个 NS 记录值
                 String[] nsValues = value.trim().split("\\s+");
