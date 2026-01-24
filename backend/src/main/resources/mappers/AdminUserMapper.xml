@@ -20,10 +20,14 @@
 		FROM users u
 		LEFT JOIN user_profiles up ON u.id = up.user_id
 		<where>
-			<if test="status!=null">u.status=#{status}</if>
+			<if test="keyword!=null and keyword!=''">
+				(u.username LIKE CONCAT('%', #{keyword}, '%') OR u.email LIKE CONCAT('%', #{keyword}, '%'))
+			</if>
+			<if test="status!=null">
+				AND u.status=#{status}
+			</if>
 			<if test="role!=null and role!=''">
-				<if test="status!=null"> AND </if>
-				u.role=#{role}
+				AND u.role=#{role}
 			</if>
 			<if test="isVerified != null">
 				<if test="isVerified == true">
@@ -42,10 +46,14 @@
 		SELECT COUNT(1) FROM users u
 		LEFT JOIN user_profiles up ON u.id = up.user_id
 		<where>
-			<if test="status!=null">u.status=#{status}</if>
+			<if test="keyword!=null and keyword!=''">
+				(u.username LIKE CONCAT('%', #{keyword}, '%') OR u.email LIKE CONCAT('%', #{keyword}, '%'))
+			</if>
+			<if test="status!=null">
+				AND u.status=#{status}
+			</if>
 			<if test="role!=null and role!=''">
-				<if test="status!=null"> AND </if>
-				u.role=#{role}
+				AND u.role=#{role}
 			</if>
 			<if test="isVerified != null">
 				<if test="isVerified == true">

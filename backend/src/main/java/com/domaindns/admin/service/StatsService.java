@@ -132,7 +132,7 @@ public class StatsService {
 
         try {
             // 总用户数
-            int totalUsers = adminUserMapper.count(null, "USER", null);
+            int totalUsers = adminUserMapper.count(null, null, "USER", null);
             stats.put("totalUsers", totalUsers);
 
             // 本周新增用户（简化计算，实际应该按创建时间统计）

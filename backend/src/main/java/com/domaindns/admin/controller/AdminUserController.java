@@ -40,6 +40,7 @@ public class AdminUserController {
 
     @GetMapping
     public ApiResponse<Map<String, Object>> list(@RequestHeader("Authorization") String authorization,
+            @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "status", required = false) Integer status,
             @RequestParam(value = "role", required = false) String role,
             @RequestParam(value = "isVerified", required = false) Boolean isVerified,
@@ -49,8 +50,8 @@ public class AdminUserController {
         validateAdminAuth(authorization);
 
         int offset = (Math.max(page, 1) - 1) * Math.max(size, 1);
-        List<AdminUser> list = mapper.list(status, role, isVerified, offset, size);
-        int total = mapper.count(status, role, isVerified);
+        List<AdminUser> list = mapper.list(keyword, status, role, isVerified, offset, size);
+        int total = mapper.count(keyword, status, role, isVerified);
         Map<String, Object> m = new HashMap<>();
         m.put("list", list);
         m.put("total", total);

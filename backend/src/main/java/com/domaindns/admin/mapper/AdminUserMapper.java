@@ -8,12 +8,14 @@ import java.util.List;
 
 @Mapper
 public interface AdminUserMapper {
-        List<AdminUser> list(@Param("status") Integer status, @Param("role") String role,
+        List<AdminUser> list(@Param("keyword") String keyword,
+                        @Param("status") Integer status, @Param("role") String role,
                         @Param("isVerified") Boolean isVerified,
                         @Param("offset") Integer offset,
                         @Param("size") Integer size);
 
-        int count(@Param("status") Integer status, @Param("role") String role, @Param("isVerified") Boolean isVerified);
+        int count(@Param("keyword") String keyword, @Param("status") Integer status, @Param("role") String role,
+                        @Param("isVerified") Boolean isVerified);
 
         int adjustPoints(@Param("id") Long id, @Param("delta") Integer delta);
 
