@@ -107,6 +107,14 @@
         </where>
     </select>
 
+    <select id="countByUserTypeRelatedId" resultType="int">
+        SELECT COUNT(1)
+        FROM points_transactions
+        WHERE user_id = #{userId}
+        AND type = #{type}
+        AND related_id = #{relatedId}
+    </select>
+
     <select id="countUserCardRedemption" resultType="int">
         SELECT COUNT(1)
         FROM points_transactions
@@ -115,4 +123,3 @@
         AND related_id = #{cardId}
     </select>
 </mapper>
-

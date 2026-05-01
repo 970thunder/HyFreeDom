@@ -12,6 +12,8 @@ public interface UserMapper {
 
     User findById(@Param("id") Long id);
 
+    java.util.List<User> findByInviterId(@Param("inviterId") Long inviterId);
+
     int insert(User user);
 
     int countByRole(@Param("role") String role);

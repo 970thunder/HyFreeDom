@@ -29,6 +29,10 @@
 		SELECT * FROM users WHERE id = #{id}
 	</select>
 
+	<select id="findByInviterId" parameterType="long" resultMap="UserMap">
+		SELECT * FROM users WHERE inviter_id = #{inviterId}
+	</select>
+
 	<select id="countByRole" parameterType="string" resultType="int">
 		SELECT COUNT(1) FROM users WHERE role = #{role}
 	</select>

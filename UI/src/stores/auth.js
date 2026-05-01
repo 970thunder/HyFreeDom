@@ -73,9 +73,9 @@ export const useAuthStore = defineStore('auth', {
                 }
 
                 // 加载管理员信息
-                const adminToken = localStorage.getItem(STORAGE_CONFIG.TOKEN_KEY)
-                const adminRole = localStorage.getItem(STORAGE_CONFIG.ADMIN_ROLE_KEY)
-                const adminUsername = localStorage.getItem(STORAGE_CONFIG.ADMIN_USERNAME_KEY)
+                const adminToken = sessionStorage.getItem(STORAGE_CONFIG.TOKEN_KEY)
+                const adminRole = sessionStorage.getItem(STORAGE_CONFIG.ADMIN_ROLE_KEY)
+                const adminUsername = sessionStorage.getItem(STORAGE_CONFIG.ADMIN_USERNAME_KEY)
 
                 if (adminToken && adminRole && adminUsername) {
                     this.adminToken = adminToken
@@ -155,7 +155,7 @@ export const useAuthStore = defineStore('auth', {
                     // 调试日志已移除
 
                     // 立即检查localStorage
-                    const savedToken = localStorage.getItem(STORAGE_CONFIG.TOKEN_KEY)
+                    const savedToken = sessionStorage.getItem(STORAGE_CONFIG.TOKEN_KEY)
                     // 调试日志已移除
 
                     return { success: true, data: response.data }
@@ -222,9 +222,9 @@ export const useAuthStore = defineStore('auth', {
 
                 // 保存管理员信息
                 if (this.adminToken && this.admin) {
-                    localStorage.setItem(STORAGE_CONFIG.TOKEN_KEY, this.adminToken)
-                    localStorage.setItem(STORAGE_CONFIG.ADMIN_ROLE_KEY, this.adminRole)
-                    localStorage.setItem(STORAGE_CONFIG.ADMIN_USERNAME_KEY, this.admin.username)
+                    sessionStorage.setItem(STORAGE_CONFIG.TOKEN_KEY, this.adminToken)
+                    sessionStorage.setItem(STORAGE_CONFIG.ADMIN_ROLE_KEY, this.adminRole)
+                    sessionStorage.setItem(STORAGE_CONFIG.ADMIN_USERNAME_KEY, this.admin.username)
                     // 调试日志已移除
                 } else {
                     // 调试日志已移除
@@ -243,9 +243,9 @@ export const useAuthStore = defineStore('auth', {
             try {
                 localStorage.removeItem(STORAGE_CONFIG.USER_TOKEN_KEY)
                 localStorage.removeItem(STORAGE_CONFIG.USER_INFO_KEY)
-                localStorage.removeItem(STORAGE_CONFIG.TOKEN_KEY)
-                localStorage.removeItem(STORAGE_CONFIG.ADMIN_ROLE_KEY)
-                localStorage.removeItem(STORAGE_CONFIG.ADMIN_USERNAME_KEY)
+                sessionStorage.removeItem(STORAGE_CONFIG.TOKEN_KEY)
+                sessionStorage.removeItem(STORAGE_CONFIG.ADMIN_ROLE_KEY)
+                sessionStorage.removeItem(STORAGE_CONFIG.ADMIN_USERNAME_KEY)
                 localStorage.removeItem(STORAGE_CONFIG.REMEMBER_ME_KEY)
             } catch (error) {
                 console.error('清除本地存储失败:', error)
@@ -286,9 +286,9 @@ export const useAuthStore = defineStore('auth', {
             this.isAdminLoggedIn = false
 
             // 只清除管理员相关的存储
-            localStorage.removeItem(STORAGE_CONFIG.TOKEN_KEY)
-            localStorage.removeItem(STORAGE_CONFIG.ADMIN_ROLE_KEY)
-            localStorage.removeItem(STORAGE_CONFIG.ADMIN_USERNAME_KEY)
+            sessionStorage.removeItem(STORAGE_CONFIG.TOKEN_KEY)
+            sessionStorage.removeItem(STORAGE_CONFIG.ADMIN_ROLE_KEY)
+            sessionStorage.removeItem(STORAGE_CONFIG.ADMIN_USERNAME_KEY)
 
             // 注意：不清除记住的用户名，因为"记住我"是为了方便下次登录
         },
@@ -345,9 +345,9 @@ export const useAuthStore = defineStore('auth', {
             this.isAdminLoggedIn = false
 
             // 清除管理员相关的存储
-            localStorage.removeItem(STORAGE_CONFIG.TOKEN_KEY)
-            localStorage.removeItem(STORAGE_CONFIG.ADMIN_ROLE_KEY)
-            localStorage.removeItem(STORAGE_CONFIG.ADMIN_USERNAME_KEY)
+            sessionStorage.removeItem(STORAGE_CONFIG.TOKEN_KEY)
+            sessionStorage.removeItem(STORAGE_CONFIG.ADMIN_ROLE_KEY)
+            sessionStorage.removeItem(STORAGE_CONFIG.ADMIN_USERNAME_KEY)
 
             // 跳转到管理员登录页
             if (window.location.pathname.startsWith('/admin')) {

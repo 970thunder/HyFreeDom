@@ -10,6 +10,10 @@ import com.domaindns.common.EncryptionUtil;
 import com.domaindns.settings.SettingsService;
 import com.domaindns.user.mapper.PointsMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import okhttp3.FormBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -17,14 +21,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.Iterator;
-
-import okhttp3.FormBody;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 
 @Service
 public class VerificationService {
@@ -50,30 +49,22 @@ public class VerificationService {
 
     @Transactional
     public void verify(Long userId, VerificationReq req) {
-        // 1. Check if already verified
         UserProfile existing = userProfileMapper.findByUserId(userId);
         if (existing != null && existing.getIsVerified() == 1) {
             throw new IllegalArgumentException("已完成实名认证，无需重复认证");
         }
 
-        // Check rate limit (1 attempt per 24 hours)
         String limitKey = "verification:limit:" + userId;
         if (Boolean.TRUE.equals(redisTemplate.hasKey(limitKey))) {
-            throw new IllegalArgumentException("24小时内只能进行一次实名认证，请稍后再试");
+            throw new IllegalArgumentException("24 小时内只能进行一次实名认证，请稍后再试");
         }
 
-        // Check if ID card is already used by another user
         try {
             String encryptedIdCard = EncryptionUtil.encrypt(req.idCard);
             UserProfile duplicateProfile = userProfileMapper.findByIdCard(encryptedIdCard);
-
-            // If duplicate exists and it's verified (isVerified=1)
-            // And it's not the current user (although we checked by userId above, this is a
-            // safeguard)
-            if (duplicateProfile != null && duplicateProfile.getIsVerified() == 1) {
-                if (!duplicateProfile.getUserId().equals(userId)) {
-                    throw new IllegalArgumentException("该身份证号已被其他账号认证，请勿重复使用");
-                }
+            if (duplicateProfile != null && duplicateProfile.getIsVerified() == 1
+                    && !duplicateProfile.getUserId().equals(userId)) {
+                throw new IllegalArgumentException("该身份证号已被其他账号认证，请勿重复使用");
             }
         } catch (Exception e) {
             if (e instanceof IllegalArgumentException) {
@@ -82,16 +73,13 @@ public class VerificationService {
             throw new RuntimeException("系统错误：预检查失败", e);
         }
 
-        // Record attempt (regardless of outcome, to prevent spam/cost)
         redisTemplate.opsForValue().set(limitKey, "1", 24, TimeUnit.HOURS);
 
-        // 2. Call Aliyun API
         boolean isValid = callAliyunApi(req.realName, req.idCard);
         if (!isValid) {
             throw new IllegalArgumentException("实名认证失败，请检查姓名和身份证号是否匹配");
         }
 
-        // 3. Encrypt and Save
         try {
             String encName = EncryptionUtil.encrypt(req.realName);
             String encId = EncryptionUtil.encrypt(req.idCard);
@@ -112,23 +100,34 @@ public class VerificationService {
                 userProfileMapper.update(existing);
             }
 
-            // 4. Award Points (from settings, default 15)
-            String rewardStr = settingsService.get("verification_reward_points", "15");
-            int rewardPoints = 15;
-            try {
-                rewardPoints = Integer.parseInt(rewardStr);
-            } catch (NumberFormatException e) {
-                // ignore, use default
-            }
-
+            int rewardPoints = parseIntSetting("verification_reward_points", 15);
             if (rewardPoints > 0) {
                 pointsMapper.adjust(userId, rewardPoints);
                 User user = userMapper.findById(userId);
                 pointsMapper.insertTxn(userId, rewardPoints, user.getPoints(), "VERIFICATION_REWARD", "实名认证奖励", null);
             }
 
+            processPendingInviteRewards(userId);
         } catch (Exception e) {
-            throw new RuntimeException("系统错误：加密失败", e);
+            throw new RuntimeException("系统错误：实名认证保存失败", e);
+        }
+    }
+
+    @Transactional
+    public void processPendingInviteRewards(Long userId) {
+        User currentUser = userMapper.findById(userId);
+        if (currentUser == null || !isVerified(userId)) {
+            return;
+        }
+
+        Long inviterId = currentUser.getInviterId();
+        if (inviterId != null) {
+            issueInviteRewardIfEligible(currentUser, inviterId);
+        }
+
+        List<User> invitees = userMapper.findByInviterId(userId);
+        for (User invitee : invitees) {
+            issueInviteRewardIfEligible(invitee, userId);
         }
     }
 
@@ -158,22 +157,65 @@ public class VerificationService {
         return profile != null && profile.getIsVerified() != null && profile.getIsVerified() == 1;
     }
 
+    private void issueInviteRewardIfEligible(User invitee, Long inviterId) {
+        if (invitee == null || invitee.getId() == null || inviterId == null) {
+            return;
+        }
+        if (!isVerified(invitee.getId()) || !isVerified(inviterId)) {
+            return;
+        }
+        if (pointsMapper.countByUserTypeRelatedId(invitee.getId(), "INVITE_CODE", inviterId) > 0) {
+            return;
+        }
+        if (pointsMapper.countByUserTypeRelatedId(inviterId, "INVITE_REWARD", invitee.getId()) > 0) {
+            return;
+        }
+
+        int inviteePoints = parseIntSetting("invitee_points", 3);
+        int inviterPoints = parseIntSetting("inviter_points", 3);
+
+        if (inviteePoints > 0) {
+            pointsMapper.adjust(invitee.getId(), inviteePoints);
+            User updatedInvitee = userMapper.findById(invitee.getId());
+            pointsMapper.insertTxn(invitee.getId(), inviteePoints,
+                    updatedInvitee != null ? updatedInvitee.getPoints() : null,
+                    "INVITE_CODE", "邀请实名通过后发放奖励积分", inviterId);
+        }
+
+        if (inviterPoints > 0) {
+            pointsMapper.adjust(inviterId, inviterPoints);
+            User updatedInviter = userMapper.findById(inviterId);
+            pointsMapper.insertTxn(inviterId, inviterPoints,
+                    updatedInviter != null ? updatedInviter.getPoints() : null,
+                    "INVITE_REWARD", "邀请用户 " + invitee.getUsername() + " 实名后获得奖励积分", invitee.getId());
+        }
+    }
+
+    private int parseIntSetting(String key, int defaultValue) {
+        String value = settingsService.get(key, String.valueOf(defaultValue));
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
     private String maskName(String name) {
-        if (name == null || name.isEmpty())
+        if (name == null || name.isEmpty()) {
             return "";
+        }
         return name.substring(0, 1) + (name.length() > 1 ? "*" : "");
     }
 
     private String maskIdCard(String idCard) {
-        if (idCard == null || idCard.length() < 18)
+        if (idCard == null || idCard.length() < 18) {
             return idCard;
-        // Hide 7-16 (index 6 to 15)
+        }
         return idCard.substring(0, 6) + "**********" + idCard.substring(16);
     }
 
     private boolean callAliyunApi(String name, String idCard) {
         if (appCode == null || appCode.isBlank()) {
-            // Fallback for development if no appCode is configured
             return true;
         }
 
@@ -181,11 +223,10 @@ public class VerificationService {
 
         try {
             OkHttpClient client = new OkHttpClient.Builder().build();
-            FormBody.Builder formbuilder = new FormBody.Builder();
-            formbuilder.add("idcard", idCard);
-            formbuilder.add("name", name);
-
-            FormBody body = formbuilder.build();
+            FormBody body = new FormBody.Builder()
+                    .add("idcard", idCard)
+                    .add("name", name)
+                    .build();
             Request request = new Request.Builder()
                     .url(url)
                     .addHeader("Authorization", "APPCODE " + appCode)
@@ -194,36 +235,27 @@ public class VerificationService {
 
             try (Response response = client.newCall(request).execute()) {
                 if (!response.isSuccessful()) {
-                    System.err.println("实名认证API请求失败: " + response.code() + " " + response.message());
+                    System.err.println("实名认证 API 请求失败: " + response.code() + " " + response.message());
                     return false;
                 }
 
                 String resultStr = response.body().string();
                 ObjectMapper mapper = new ObjectMapper();
                 Map<String, Object> map = mapper.readValue(resultStr, Map.class);
-
-                // {
-                // "code": "0", //返回码，0：成功，非0：失败（详见错误码定义）
-                // "message": "成功", //返回码说明
-                // "result": {
-                // "res": "1", //核验结果状态码，1 一致；2 不一致；3 无记录(预留)
-                // ...
-                // }
-                // }
-
                 Object codeObj = map.get("code");
                 String code = codeObj != null ? codeObj.toString() : "";
-
-                if ("0".equals(code)) {
-                    Map<String, Object> result = (Map<String, Object>) map.get("result");
-                    if (result != null) {
-                        Object resObj = result.get("res");
-                        String res = resObj != null ? resObj.toString() : "";
-                        return "1".equals(res); // 1 一致
-                    }
+                if (!"0".equals(code)) {
+                    return false;
                 }
+
+                Map<String, Object> result = (Map<String, Object>) map.get("result");
+                if (result == null) {
+                    return false;
+                }
+                Object resObj = result.get("res");
+                String res = resObj != null ? resObj.toString() : "";
+                return "1".equals(res);
             }
-            return false;
         } catch (Exception e) {
             e.printStackTrace();
             return false;

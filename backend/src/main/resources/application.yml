@@ -3,7 +3,7 @@ spring:
     name: domaindns-backend
   profiles:
 #    active: prod
-    active: dev
+    active: prod
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
@@ -42,6 +42,11 @@ jwt:
   secret: "replace-with-strong-secret"
   issuer: "domaindns"
   expire-minutes: 1440
+  admin-expire-minutes: 120
+
+app:
+  security:
+    allow-public-admin-register: false
 
 secrets:
   aes-key: ${SECRETS_AES_KEY:}

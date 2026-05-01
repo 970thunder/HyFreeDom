@@ -1,6 +1,5 @@
 <template>
 	<div class="container" style="display:grid;place-items:center;min-height:100vh;">
-		<!-- SEO组件 -->
 		<SEOHead pageName="adminLogin" />
 		<form class="form" @submit.prevent="onSubmit">
 			<div class="flex-column">
@@ -44,19 +43,17 @@
 				{{ errorMessage }}
 			</div>
 
-
 			<button class="button-submit" type="submit" :disabled="isLoading">
 				{{ isLoading ? '登录中...' : '登录管理端' }}
 			</button>
 
 			<div class="login-actions">
 				<p class="p"><span class="span" @click.prevent="goUserLogin">去用户登录</span></p>
-				<!-- 调试按钮 -->
-				<button type="button" @click="testRememberMe" class="test-btn">测试记住我功能</button>
 			</div>
 		</form>
 	</div>
 </template>
+
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -72,9 +69,6 @@ const remember = ref(false)
 const isLoading = ref(false)
 const errorMessage = ref('')
 
-// 已删除设置页面相关功能
-
-// 管理员登录
 const onSubmit = async () => {
 	if (!email.value.trim() || !password.value.trim()) {
 		errorMessage.value = '请输入账号和密码'
@@ -90,25 +84,13 @@ const onSubmit = async () => {
 			password: password.value
 		})
 
-		// 调试日志已移除
-		// 调试日志已移除
-
 		if (result.success) {
-			// 设置记住我
 			authStore.setRememberMe(remember.value)
-			// 调试日志已移除
-
-			// 如果选择了记住我，保存用户名
 			if (remember.value) {
 				authStore.setRememberedUsername(email.value)
-				// 调试日志已移除
-				// 调试日志已移除
 			} else {
 				authStore.clearRememberedUsername()
-				// 调试日志已移除
 			}
-
-			// 跳转到管理后台
 			router.push('/admin/dashboard')
 		} else {
 			errorMessage.value = result.message || '登录失败'
@@ -122,39 +104,17 @@ const onSubmit = async () => {
 }
 
 const goUserLogin = () => router.push('/user/login')
-const goForgot = () => { }
+const goForgot = () => {}
 
-// 测试记住我功能
-const testRememberMe = () => {
-	// 调试日志已移除
-	// 调试日志已移除
-
-	// 测试保存
-	if (email.value) {
-		authStore.setRememberedUsername(email.value)
-		// 调试日志已移除
-	}
-
-	// 测试获取
-	const savedUsername = authStore.getRememberedUsername()
-	// 调试日志已移除
-}
-
-// 组件挂载时恢复记住的用户名
 onMounted(() => {
-	// 恢复记住的用户名
 	const rememberedUsername = authStore.getRememberedUsername()
-	// 调试日志已移除
-
 	if (rememberedUsername) {
 		email.value = rememberedUsername
 		remember.value = true
-		// 调试日志已移除
-	} else {
-		// 调试日志已移除
 	}
 })
 </script>
+
 <style scoped>
 .form {
 	display: flex;
@@ -176,7 +136,7 @@ onMounted(() => {
 	align-self: flex-end;
 }
 
-.flex-column>label {
+.flex-column > label {
 	color: #151717;
 	font-weight: 600;
 }
@@ -215,7 +175,7 @@ onMounted(() => {
 	justify-content: space-between;
 }
 
-.flex-row>div>label {
+.flex-row > div > label {
 	font-size: 14px;
 	color: black;
 	font-weight: 400;
@@ -292,50 +252,6 @@ onMounted(() => {
 	margin-top: 10px;
 }
 
-.setup-link {
-	color: #ef4444 !important;
-	font-weight: 600;
-}
-
-
-.btn {
-	margin-top: 10px;
-	width: 100%;
-	height: 50px;
-	border-radius: 10px;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	font-weight: 500;
-	gap: 10px;
-	border: 1px solid #ededef;
-	background-color: white;
-	cursor: pointer;
-	transition: 0.2s ease-in-out;
-}
-
-.btn:hover {
-	border: 1px solid #2d79f3;
-}
-
-.test-btn {
-	margin-top: 10px;
-	padding: 8px 16px;
-	background-color: #f3f4f6;
-	border: 1px solid #d1d5db;
-	border-radius: 6px;
-	color: #374151;
-	font-size: 12px;
-	cursor: pointer;
-	transition: all 0.2s;
-}
-
-.test-btn:hover {
-	background-color: #e5e7eb;
-	border-color: #9ca3af;
-}
-
-/* 响应式：窄屏表单宽度自适应 */
 @media (max-width: 520px) {
 	.form {
 		width: 100%;
