@@ -11,4 +11,11 @@ public interface AuditMapper {
     List<AuditLog> list(@Param("action") String action, @Param("offset") Integer offset, @Param("size") Integer size);
 
     int count(@Param("action") String action);
+
+    int insert(AuditLog auditLog);
+
+    List<AuditLog> listEmailCodeLogs(@Param("email") String email, @Param("ip") String ip,
+            @Param("offset") Integer offset, @Param("size") Integer size);
+
+    int countEmailCodeLogs(@Param("email") String email, @Param("ip") String ip);
 }

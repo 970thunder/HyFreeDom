@@ -7,7 +7,7 @@
 export const SEO_CONFIG = {
     // 网站基础信息
     siteName: 'HyFreeDom',
-    siteUrl: 'https://freedns.hyper99.shop',
+    siteUrl: 'https://freedns.hyper99.top',
     siteDescription: '专业的免费二级域名申请平台，为用户提供免费的二级域名服务。支持自定义域名、DNS解析、域名管理等功能。',
 
     // 默认关键词

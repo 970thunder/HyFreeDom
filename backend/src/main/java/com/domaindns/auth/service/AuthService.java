@@ -45,12 +45,14 @@ public class AuthService {
     private final EmailWhitelistService emailWhitelistService;
     private final UserProfileMapper userProfileMapper;
     private final VerificationService verificationService;
+    private final EmailCodeSecurityService emailCodeSecurityService;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     public AuthService(UserMapper userMapper, JwtService jwtService, EmailService emailService,
             StringRedisTemplate redis, RateLimiter rateLimiter, SettingsService settingsService,
             PointsMapper pointsMapper, InviteMapper inviteMapper, EmailWhitelistService emailWhitelistService,
-            UserProfileMapper userProfileMapper, VerificationService verificationService) {
+            UserProfileMapper userProfileMapper, VerificationService verificationService,
+            EmailCodeSecurityService emailCodeSecurityService) {
         this.userMapper = userMapper;
         this.jwtService = jwtService;
         this.emailService = emailService;
@@ -62,16 +64,26 @@ public class AuthService {
         this.emailWhitelistService = emailWhitelistService;
         this.userProfileMapper = userProfileMapper;
         this.verificationService = verificationService;
+        this.emailCodeSecurityService = emailCodeSecurityService;
     }
 
-    public void sendRegisterCode(String email) {
-        boolean allowed = rateLimiter.tryConsume("rl:regcode:" + email, 3, Duration.ofMinutes(1));
-        if (!allowed) {
-            throw new IllegalArgumentException("请求过于频繁，请稍后再试");
+    public void sendRegisterCode(String email, String ipAddress, String userAgent) {
+        email = emailCodeSecurityService.normalizeEmail(email);
+        EmailWhitelistService.EmailValidationResult validationResult = emailWhitelistService.validateEmail(email);
+        if (!validationResult.isValid()) {
+            emailCodeSecurityService.recordRejected("REGISTER", email, ipAddress, userAgent, "email_not_allowed");
+            throw new IllegalArgumentException(validationResult.getMessage());
         }
+        emailCodeSecurityService.enforceSendLimit("REGISTER", email, ipAddress, userAgent);
         String code = String.format("%06d", new Random().nextInt(1_000_000));
         redis.opsForValue().set("regcode:" + email, code, Duration.ofMinutes(10));
-        emailService.sendVerificationCode(email, code, "register");
+        try {
+            emailService.sendVerificationCode(email, code, "register");
+            emailCodeSecurityService.recordSent("REGISTER", email, ipAddress, userAgent);
+        } catch (RuntimeException ex) {
+            emailCodeSecurityService.recordFailure("REGISTER", email, ipAddress, userAgent, ex.getClass().getSimpleName());
+            throw ex;
+        }
     }
 
     @Transactional
@@ -79,6 +91,7 @@ public class AuthService {
         if (req.email == null || req.email.isBlank()) {
             throw new IllegalArgumentException("邮箱必填");
         }
+        req.email = emailCodeSecurityService.normalizeEmail(req.email);
         String key = "regcode:" + req.email;
         String expect = redis.opsForValue().get(key);
         if (expect == null || !expect.equals(req.emailCode)) {
@@ -245,23 +258,29 @@ public class AuthService {
         }
     }
 
-    public void startReset(String email) {
+    public void startReset(String email, String ipAddress, String userAgent) {
+        email = emailCodeSecurityService.normalizeEmail(email);
         User u = userMapper.findByEmail(email);
         if (u == null) {
+            emailCodeSecurityService.recordRejected("RESET", email, ipAddress, userAgent, "email_not_found");
             throw new IllegalArgumentException("邮箱不存在");
         }
-        boolean allowed = rateLimiter.tryConsume("rl:reset:" + email, 3, Duration.ofMinutes(1));
-        if (!allowed) {
-            throw new IllegalArgumentException("请求过于频繁，请稍后再试");
-        }
+        emailCodeSecurityService.enforceSendLimit("RESET", email, ipAddress, userAgent);
         String code = String.format("%06d", new Random().nextInt(1_000_000));
         String key = "pwdreset:" + email;
         redis.opsForValue().set(key, code, Duration.ofMinutes(10));
-        emailService.sendVerificationCode(email, code, "reset");
+        try {
+            emailService.sendVerificationCode(email, code, "reset");
+            emailCodeSecurityService.recordSent("RESET", email, ipAddress, userAgent);
+        } catch (RuntimeException ex) {
+            emailCodeSecurityService.recordFailure("RESET", email, ipAddress, userAgent, ex.getClass().getSimpleName());
+            throw ex;
+        }
     }
 
     @Transactional
     public void resetPassword(String email, String code, String newPassword) {
+        email = emailCodeSecurityService.normalizeEmail(email);
         String key = "pwdreset:" + email;
         String expect = redis.opsForValue().get(key);
         if (expect == null || !expect.equals(code)) {

@@ -47,6 +47,11 @@ jwt:
 app:
   security:
     allow-public-admin-register: false
+    email-code:
+      cooldown-seconds: ${EMAIL_CODE_COOLDOWN_SECONDS:60}
+      recipient-day-limit: ${EMAIL_CODE_RECIPIENT_DAY_LIMIT:3}
+      ip-hour-limit: ${EMAIL_CODE_IP_HOUR_LIMIT:5}
+      ip-day-limit: ${EMAIL_CODE_IP_DAY_LIMIT:5}
 
 secrets:
   aes-key: ${SECRETS_AES_KEY:}

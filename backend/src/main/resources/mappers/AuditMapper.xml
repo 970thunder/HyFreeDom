@@ -26,4 +26,30 @@
 			<if test="action!=null and action!=''">action=#{action}</if>
 		</where>
 	</select>
+
+	<insert id="insert" parameterType="com.domaindns.admin.model.AuditLog" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO audit_logs(actor_id, action, target, detail, ip)
+		VALUES(#{actorId}, #{action}, #{target}, #{detail}, #{ip})
+	</insert>
+
+	<select id="listEmailCodeLogs" resultMap="AuditMap">
+		SELECT id, actor_id, action, target, detail, ip, created_at
+		FROM audit_logs
+		<where>
+			action LIKE 'EMAIL_CODE_%'
+			<if test="email != null and email != ''">AND target LIKE CONCAT('%', #{email}, '%')</if>
+			<if test="ip != null and ip != ''">AND ip = #{ip}</if>
+		</where>
+		ORDER BY id DESC
+		LIMIT #{offset}, #{size}
+	</select>
+
+	<select id="countEmailCodeLogs" resultType="int">
+		SELECT COUNT(1) FROM audit_logs
+		<where>
+			action LIKE 'EMAIL_CODE_%'
+			<if test="email != null and email != ''">AND target LIKE CONCAT('%', #{email}, '%')</if>
+			<if test="ip != null and ip != ''">AND ip = #{ip}</if>
+		</where>
+	</select>
 </mapper>

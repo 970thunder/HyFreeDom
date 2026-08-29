@@ -190,15 +190,13 @@ export const useAuthStore = defineStore('auth', {
                 const response = await apiPost('/api/auth/register/send-code', { email })
 
                 if (response.code === ERROR_CODES.SUCCESS) {
-                    // 立即返回成功，不等待邮件发送完成
-                    return { success: true, message: '验证码发送中，请稍后查收邮件' }
+                    return { success: true, message: '验证码已发送，请查收邮件' }
                 } else {
                     return { success: false, message: response.message }
                 }
             } catch (error) {
                 console.error('发送验证码失败:', error)
-                // 即使网络错误也返回成功，让用户进入验证码输入界面
-                return { success: true, message: '验证码发送中，请稍后查收邮件' }
+                return { success: false, message: error.message || '发送验证码失败' }
             }
         },
 

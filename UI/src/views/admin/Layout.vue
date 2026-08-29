@@ -15,6 +15,7 @@
 						<el-menu-item index="/admin/cards">卡密管理</el-menu-item>
 						<el-menu-item index="/admin/featured-sites">推荐网站</el-menu-item>
 						<el-menu-item index="/admin/points-logs">流水日志</el-menu-item>
+						<el-menu-item index="/admin/email-logs">邮件日志</el-menu-item>
 						<el-menu-item index="/admin/github-tasks">GitHub任务</el-menu-item>
 						<el-menu-item index="/admin/settings">系统设置</el-menu-item>
 					</el-menu>

@@ -30,7 +30,6 @@ public class EmailService {
         this.templateEngine = templateEngine;
     }
 
-    @Async
     public void sendVerificationCode(String email, String code, String type) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -59,9 +58,9 @@ public class EmailService {
 
             mailSender.send(message);
             System.out.println("验证码邮件发送成功: " + email);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             System.err.println("验证码邮件发送失败: " + email + ", 错误: " + e.getMessage());
-            e.printStackTrace();
+            throw new IllegalStateException("验证码邮件发送失败，请稍后再试", e);
         }
     }
 

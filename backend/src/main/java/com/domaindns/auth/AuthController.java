@@ -53,8 +53,8 @@ public class AuthController {
     }
 
     @PostMapping("/register/send-code")
-    public ApiResponse<Void> sendRegisterCode(@Valid @RequestBody SendRegisterCodeReq req) {
-        authService.sendRegisterCode(req.email);
+    public ApiResponse<Void> sendRegisterCode(@Valid @RequestBody SendRegisterCodeReq req, HttpServletRequest request) {
+        authService.sendRegisterCode(req.email, ClientIpUtils.resolveClientIp(request), request.getHeader("User-Agent"));
         return ApiResponse.ok(null);
     }
 
@@ -88,8 +88,8 @@ public class AuthController {
     }
 
     @PostMapping("/forgot")
-    public ApiResponse<Void> forgot(@Valid @RequestBody ForgotPasswordReq req) {
-        authService.startReset(req.email);
+    public ApiResponse<Void> forgot(@Valid @RequestBody ForgotPasswordReq req, HttpServletRequest request) {
+        authService.startReset(req.email, ClientIpUtils.resolveClientIp(request), request.getHeader("User-Agent"));
         return ApiResponse.ok(null);
     }
 

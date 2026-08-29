@@ -41,6 +41,26 @@ public class AuditController {
         return ApiResponse.ok(m);
     }
 
+    @GetMapping("/email-codes")
+    public ApiResponse<Map<String, Object>> listEmailCodeLogs(@RequestHeader("Authorization") String authorization,
+            @RequestParam(value = "email", required = false) String email,
+            @RequestParam(value = "ip", required = false) String ip,
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "20") Integer size) {
+        validateAdminAuth(authorization);
+        int safePage = Math.max(page, 1);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        int offset = (safePage - 1) * safeSize;
+        List<AuditLog> list = mapper.listEmailCodeLogs(email, ip, offset, safeSize);
+        int total = mapper.countEmailCodeLogs(email, ip);
+        Map<String, Object> m = new HashMap<>();
+        m.put("list", list);
+        m.put("total", total);
+        m.put("page", safePage);
+        m.put("size", safeSize);
+        return ApiResponse.ok(m);
+    }
+
     // 验证管理员权限
     private void validateAdminAuth(String authorization) {
         if (authorization == null || !authorization.startsWith("Bearer ")) {

@@ -295,22 +295,12 @@ const validateForm = () => {
 
 // 发送验证码
 const sendVerificationCode = async () => {
-	try {
-		const result = await authStore.sendRegisterCode(formData.value.email)
-
-		if (result.success) {
-			// 立即进入验证码输入界面，不等待邮件发送完成
-			showEmailVerification.value = true
-			startResendCountdown()
-		} else {
-			errorMessage.value = result.message || '发送验证码失败'
-		}
-	} catch (error) {
-		// 即使发送失败，也进入验证码输入界面，让用户可以重试
-		showEmailVerification.value = true
-		startResendCountdown()
-		verificationError.value = '验证码发送中，请稍后重试或检查邮箱'
+	const result = await authStore.sendRegisterCode(formData.value.email)
+	if (!result.success) {
+		throw new Error(result.message || '发送验证码失败')
 	}
+	showEmailVerification.value = true
+	startResendCountdown()
 }
 
 // 开始重发倒计时
@@ -479,17 +469,9 @@ const onSubmit = async () => {
 	errorMessage.value = ''
 
 	try {
-		// 立即进入验证码输入界面，异步发送邮件
-		showEmailVerification.value = true
-		startResendCountdown()
-
-		// 异步发送验证码，不等待结果
-		sendVerificationCode().catch(error => {
-			console.error('发送验证码失败:', error)
-			verificationError.value = '验证码发送中，请稍后重试或检查邮箱'
-		})
+		await sendVerificationCode()
 	} catch (error) {
-		errorMessage.value = '发送验证码失败，请稍后重试'
+		errorMessage.value = error.message || '发送验证码失败，请稍后重试'
 	} finally {
 		isLoading.value = false
 	}

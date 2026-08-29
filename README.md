@@ -8,7 +8,7 @@
 
 一个基于 Spring Boot 和 Vue.js 的现代化二级域名分发平台，支持 Cloudflare DNS 管理、积分系统、邀请机制和完整的用户管理功能。
 
-这是我搭建好的域名分发网站：https://freedns.hyper99.shop/
+这是我搭建好的域名分发网站：https://freedns.hyper99.top/
 
 ## ✨ 主要特性
 

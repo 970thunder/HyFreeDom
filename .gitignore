@@ -17,6 +17,7 @@ backend/src/main/resources/application-test.yml
 .env.production
 .env.test
 *.env
+!UI/.env.production
 
 # 生产环境配置备份
 production-config-backup.md
